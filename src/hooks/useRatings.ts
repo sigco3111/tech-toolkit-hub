@@ -10,6 +10,7 @@ import {
   updateDoc, 
   deleteDoc, 
   doc, 
+  getDocs,
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -189,13 +190,10 @@ export function useRatings(toolId: string): FirestoreQueryResult<FirebaseRating>
         where('toolId', '==', toolId)
       );
 
-      const snapshot = await new Promise<any>((resolve, reject) => {
-        const unsubscribe = onSnapshot(ratingsQuery, resolve, reject);
-        // 즉시 구독 해제는 하지 않고, 한 번의 스냅샷만 받기 위해 Promise 사용
-        setTimeout(() => unsubscribe(), 100);
-      });
+      // getDocs를 사용하여 한 번만 데이터 가져오기
+      const snapshot = await getDocs(ratingsQuery);
 
-      const ratings = snapshot.docs.map((doc: any) => doc.data().rating);
+      const ratings = snapshot.docs.map((doc) => doc.data().rating);
       const averageRating = ratings.length > 0 
         ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length 
         : 0;

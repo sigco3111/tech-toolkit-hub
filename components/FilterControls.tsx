@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useDebounce } from '../src/utils/performance';
 
 interface FilterControlsProps {
   categories: string[];
@@ -19,6 +20,21 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   sortOrder,
   onSortChange,
 }) => {
+  // 로컬 검색어 상태 (즉시 UI 업데이트용)
+  const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
+  
+  // 디바운스된 검색 함수 (500ms 지연)
+  const debouncedSearch = useDebounce(onSearchChange, 500);
+  
+  // 검색어가 외부에서 변경될 때 로컬 상태 동기화
+  useEffect(() => {
+    setLocalSearchTerm(searchTerm);
+  }, [searchTerm]);
+  
+  // 로컬 검색어 변경 시 디바운스된 검색 실행
+  useEffect(() => {
+    debouncedSearch(localSearchTerm);
+  }, [localSearchTerm, debouncedSearch]);
   return (
     <div className="bg-white p-4 rounded-xl shadow-md mb-8 sticky top-4 z-10">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -29,8 +45,8 @@ const FilterControls: React.FC<FilterControlsProps> = ({
             id="search-input"
             placeholder="예: ChatGPT, Suno..."
             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition"
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={localSearchTerm}
+            onChange={(e) => setLocalSearchTerm(e.target.value)}
           />
         </div>
         <div>

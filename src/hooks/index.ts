@@ -2,4 +2,5 @@
 export { useAuth } from './useAuth';
 export { useTools, useTool } from './useTools';
 export { useRatings, useUserRatings } from './useRatings';
-export { useComments, useRecentComments } from './useComments'; 
+export { useComments, useRecentComments } from './useComments';
+export { useToast } from './useToast'; 

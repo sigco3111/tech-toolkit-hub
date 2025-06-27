@@ -5,32 +5,15 @@ import FilterControls from './components/FilterControls';
 import { CategoryChart } from './components/CategoryChart';
 import UserAuth from './components/UserAuth';
 import AddToolModal from './components/AddToolModal';
+import { ToastContainer } from './src/components/Toast';
+import { ToolListSkeleton, ChartSkeleton, FilterSkeleton } from './src/components/LoadingSkeleton';
 import { AuthProvider, useAuthContext } from './src/contexts/AuthContext';
 import { useTools } from './src/hooks/useTools';
+import { useToast } from './src/hooks/useToast';
 import { isFirebaseConfigured } from './src/lib/firebase';
 import { AI_TOOLS_DATA, CATEGORIES } from './constants';
 
-/**
- * 로딩 스켈레톤 컴포넌트
- */
-const LoadingSkeleton: React.FC = () => (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-    {Array.from({ length: 8 }).map((_, index) => (
-      <div key={index} className="bg-white rounded-xl shadow-md overflow-hidden animate-pulse">
-        <div className="p-6">
-          <div className="flex justify-between items-start mb-2">
-            <div className="h-4 bg-slate-200 rounded w-20"></div>
-            <div className="h-4 bg-slate-200 rounded w-16"></div>
-          </div>
-          <div className="h-6 bg-slate-200 rounded w-3/4 mb-2"></div>
-          <div className="h-4 bg-slate-200 rounded w-full mb-2"></div>
-          <div className="h-4 bg-slate-200 rounded w-2/3 mb-4"></div>
-          <div className="h-10 bg-slate-200 rounded w-full"></div>
-        </div>
-      </div>
-    ))}
-  </div>
-);
+
 
 /**
  * 에러 표시 컴포넌트
@@ -81,6 +64,9 @@ const AppContent: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<SortOption>('rating_desc');
   const [selectedCategory, setSelectedCategory] = useState('전체');
   const [isAddToolModalOpen, setIsAddToolModalOpen] = useState(false);
+  
+  // 토스트 메시지 관리
+  const { toasts, removeToast, showSuccess, showError } = useToast();
   
   // Firebase 설정 확인
   const firebaseConfigured = isFirebaseConfigured();
@@ -281,7 +267,7 @@ const AppContent: React.FC = () => {
             </div>
 
             {/* 로딩 상태 (Firebase 설정된 경우에만) */}
-            {firebaseConfigured && isLoading && <LoadingSkeleton />}
+            {firebaseConfigured && isLoading && <ToolListSkeleton />}
 
             {/* 빈 데이터 상태 (Firebase 설정된 경우에만) */}
             {firebaseConfigured && !isLoading && aiToolsData.length === 0 && <EmptyState />}
@@ -321,7 +307,12 @@ const AppContent: React.FC = () => {
         onClose={() => setIsAddToolModalOpen(false)}
         onAddTool={handleAddTool}
         categories={categories}
+        onSuccess={showSuccess}
+        onError={showError}
       />
+
+      {/* 토스트 메시지 컨테이너 */}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
     </div>
   );
 };
