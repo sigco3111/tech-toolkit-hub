@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { AiTool, SortOption, FirebaseTool, ToolInput } from './types';
 import ToolCard from './components/ToolCard';
 import FilterControls from './components/FilterControls';
@@ -6,6 +6,7 @@ import { CategoryChart } from './components/CategoryChart';
 import UserAuth from './components/UserAuth';
 import AddToolModal from './components/AddToolModal';
 import { ToastContainer } from './src/components/Toast';
+import Pagination from './components/Pagination';
 import { ToolListSkeleton, ChartSkeleton, FilterSkeleton } from './src/components/LoadingSkeleton';
 import { AuthProvider, useAuthContext } from './src/contexts/AuthContext';
 import { useTools } from './src/hooks/useTools';
@@ -64,6 +65,10 @@ const AppContent: React.FC = () => {
   const [sortOrder, setSortOrder] = useState<SortOption>('created_desc');
   const [selectedCategory, setSelectedCategory] = useState('전체');
   const [isAddToolModalOpen, setIsAddToolModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  // 페이징 설정
+  const ITEMS_PER_PAGE = 40;
   
   // 토스트 메시지 관리
   const { toasts, removeToast, showSuccess, showError } = useToast();
@@ -75,14 +80,16 @@ const AppContent: React.FC = () => {
   const firebaseData = useTools();
   
   // 데이터 소스 결정 (Firebase 설정 여부에 따라)
-  const { data: firebaseTools, isLoading, error, categories, addTool } = firebaseConfigured 
+  const { data: firebaseTools, isLoading, error, categories, addTool, updateTool, deleteTool } = firebaseConfigured 
     ? firebaseData 
     : { 
         data: [], 
         isLoading: false, 
         error: null, 
         categories: CATEGORIES,
-        addTool: async () => { throw new Error('Firebase가 설정되지 않았습니다.'); }
+        addTool: async () => { throw new Error('Firebase가 설정되지 않았습니다.'); },
+        updateTool: async () => { throw new Error('Firebase가 설정되지 않았습니다.'); },
+        deleteTool: async () => { throw new Error('Firebase가 설정되지 않았습니다.'); }
       };
 
   /**
@@ -99,7 +106,7 @@ const AppContent: React.FC = () => {
   });
 
   // 데이터 소스 결정: Firebase 데이터 또는 정적 데이터
-  const aiToolsData = useMemo(() => {
+  const aiToolsData: (AiTool | FirebaseTool)[] = useMemo(() => {
     // 디버깅용 로그
     console.log('🔍 데이터 소스 결정:', {
       firebaseConfigured,
@@ -110,7 +117,8 @@ const AppContent: React.FC = () => {
     
     if (firebaseConfigured && firebaseTools.length > 0) {
       console.log('✅ Firebase 데이터 사용:', firebaseTools.length + '개');
-      return firebaseTools.map(convertToAiTool);
+      // Firebase 도구를 변환하지 않고 그대로 사용 (편집 기능을 위해)
+      return firebaseTools;
     }
     // Firebase가 설정되지 않았거나 데이터가 없는 경우 정적 데이터 사용
     console.log('📄 정적 데이터 사용:', AI_TOOLS_DATA.length + '개');
@@ -141,11 +149,16 @@ const AppContent: React.FC = () => {
     }
 
     return [...filteredTools].sort((a, b) => {
+      // 타입 가드 함수
+      const isFirebaseTool = (tool: AiTool | FirebaseTool): tool is FirebaseTool => 'averageRating' in tool;
+      const getToolRating = (tool: AiTool | FirebaseTool): number => 
+        isFirebaseTool(tool) ? tool.averageRating : tool.rating;
+      
       switch (sortOrder) {
         case 'rating_desc':
-          return b.rating - a.rating;
+          return getToolRating(b) - getToolRating(a);
         case 'rating_asc':
-          return a.rating - b.rating;
+          return getToolRating(a) - getToolRating(b);
         case 'name_asc':
           return a.name.localeCompare(b.name);
         case 'name_desc':
@@ -161,6 +174,21 @@ const AppContent: React.FC = () => {
       }
     });
   }, [aiToolsData, searchTerm, sortOrder, selectedCategory]);
+
+  // 페이징 처리된 데이터
+  const paginatedTools = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredAndSortedTools.slice(startIndex, endIndex);
+  }, [filteredAndSortedTools, currentPage, ITEMS_PER_PAGE]);
+
+  // 총 페이지 수 계산
+  const totalPages = Math.ceil(filteredAndSortedTools.length / ITEMS_PER_PAGE);
+
+  // 필터나 검색이 변경될 때 첫 페이지로 이동
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, sortOrder]);
 
   /**
    * 에러 발생 시 재시도 함수
@@ -182,6 +210,36 @@ const AppContent: React.FC = () => {
     }
 
     await addTool(toolData, user.uid);
+  };
+
+  /**
+   * 도구 수정 핸들러
+   */
+  const handleUpdateTool = async (toolId: string, toolData: ToolInput): Promise<void> => {
+    if (!user) {
+      throw new Error('로그인이 필요합니다.');
+    }
+    
+    if (!firebaseConfigured) {
+      throw new Error('Firebase가 설정되지 않았습니다.');
+    }
+
+    await updateTool(toolId, toolData, user.uid);
+  };
+
+  /**
+   * 도구 삭제 핸들러
+   */
+  const handleDeleteTool = async (toolId: string): Promise<void> => {
+    if (!user) {
+      throw new Error('로그인이 필요합니다.');
+    }
+    
+    if (!firebaseConfigured) {
+      throw new Error('Firebase가 설정되지 않았습니다.');
+    }
+
+    await deleteTool(toolId, user.uid);
   };
 
   return (
@@ -289,7 +347,7 @@ const AppContent: React.FC = () => {
             <section className="my-12 p-6 bg-white rounded-xl shadow-md">
               <h2 className="text-2xl font-bold text-center text-slate-800 mb-4">카테고리별 평균 별점</h2>
               <div className="relative w-full h-[400px] max-h-[50vh]">
-                <CategoryChart data={aiToolsData} />
+                <CategoryChart data={aiToolsData as AiTool[]} />
               </div>
             </section>
           )}
@@ -298,7 +356,15 @@ const AppContent: React.FC = () => {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold text-slate-800">도구 목록</h2>
               {(!firebaseConfigured || !isLoading) && (
-                <span className="text-slate-500 font-medium">{filteredAndSortedTools.length}개 항목</span>
+                <div className="text-slate-500 font-medium">
+                  {totalPages > 1 ? (
+                    <span>
+                      전체 {filteredAndSortedTools.length}개 중 {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, filteredAndSortedTools.length)}개 표시
+                    </span>
+                  ) : (
+                    <span>{filteredAndSortedTools.length}개 항목</span>
+                  )}
+                </div>
               )}
             </div>
 
@@ -323,11 +389,28 @@ const AppContent: React.FC = () => {
 
             {/* 도구 목록 */}
             {(!firebaseConfigured || !isLoading) && filteredAndSortedTools.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredAndSortedTools.map((tool, index) => (
-                  <ToolCard key={`${tool.name}-${index}`} tool={tool} />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {paginatedTools.map((tool, index) => (
+                    <ToolCard 
+                      key={`${tool.name}-${index}`} 
+                      tool={tool} 
+                      onUpdateTool={firebaseConfigured ? handleUpdateTool : undefined}
+                      onDeleteTool={firebaseConfigured ? handleDeleteTool : undefined}
+                      categories={categories}
+                    />
+                  ))}
+                </div>
+                
+                {/* 페이징 컴포넌트 */}
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                  totalItems={filteredAndSortedTools.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                />
+              </>
             )}
           </main>
         </>
