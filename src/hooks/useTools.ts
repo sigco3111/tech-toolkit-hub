@@ -7,6 +7,9 @@ import {
   where, 
   onSnapshot, 
   addDoc, 
+  doc,
+  updateDoc,
+  deleteDoc,
   serverTimestamp,
   QueryConstraint 
 } from 'firebase/firestore';
@@ -21,6 +24,8 @@ import { FirebaseTool, ToolInput, FirestoreQueryResult, SortOption } from '../..
  */
 export function useTools(category?: string, sortOrder: SortOption = 'created_desc'): FirestoreQueryResult<FirebaseTool> & {
   addTool: (toolData: ToolInput, userId: string) => Promise<void>;
+  updateTool: (toolId: string, toolData: ToolInput, userId: string) => Promise<void>;
+  deleteTool: (toolId: string, userId: string) => Promise<void>;
   categories: string[];
 } {
   const [data, setData] = useState<FirebaseTool[]>([]);
@@ -143,6 +148,51 @@ export function useTools(category?: string, sortOrder: SortOption = 'created_des
     }
   };
 
+  /**
+   * 기존 도구를 Firestore에서 수정
+   * @param toolId 수정할 도구 ID
+   * @param toolData 수정할 도구 정보
+   * @param userId 도구를 수정하는 사용자 ID
+   */
+  const updateTool = async (toolId: string, toolData: ToolInput, userId: string): Promise<void> => {
+    try {
+      // 도구 문서 참조
+      const toolRef = doc(db, 'tools', toolId);
+      
+      // 수정할 데이터 준비 (평점 관련 필드는 제외)
+      const updatedTool = {
+        ...toolData,
+        updatedAt: serverTimestamp()
+      };
+
+      await updateDoc(toolRef, updatedTool);
+      console.log('✅ 도구 수정 완료:', toolData.name);
+      
+    } catch (error: any) {
+      console.error('❌ 도구 수정 실패:', error);
+      throw new Error(error.message || '도구 수정 중 오류가 발생했습니다.');
+    }
+  };
+
+  /**
+   * 기존 도구를 Firestore에서 삭제
+   * @param toolId 삭제할 도구 ID
+   * @param userId 도구를 삭제하는 사용자 ID
+   */
+  const deleteTool = async (toolId: string, userId: string): Promise<void> => {
+    try {
+      // 도구 문서 참조
+      const toolRef = doc(db, 'tools', toolId);
+      
+      await deleteDoc(toolRef);
+      console.log('✅ 도구 삭제 완료:', toolId);
+      
+    } catch (error: any) {
+      console.error('❌ 도구 삭제 실패:', error);
+      throw new Error(error.message || '도구 삭제 중 오류가 발생했습니다.');
+    }
+  };
+
   // 사용 가능한 카테고리 목록 추출
   const categories = useMemo(() => {
     const uniqueCategories = [...new Set(data.map(tool => tool.category))];
@@ -154,6 +204,8 @@ export function useTools(category?: string, sortOrder: SortOption = 'created_des
     isLoading,
     error,
     addTool,
+    updateTool,
+    deleteTool,
     categories
   };
 }

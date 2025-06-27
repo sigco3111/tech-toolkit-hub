@@ -2,23 +2,32 @@ import React, { useState, useEffect } from 'react';
 import { AiTool, FirebaseTool } from '../types';
 import StarRating from './StarRating';
 import ReviewModal from './ReviewModal';
+import EditToolModal from './EditToolModal';
 import { useRatings } from '../src/hooks/useRatings';
 import { useRecentComments } from '../src/hooks/useComments';
 import { useToast } from '../src/hooks/useToast';
 import { isFirebaseConfigured } from '../src/lib/firebase';
+import { useAuthContext } from '../src/contexts/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../src/lib/firebase';
 
 interface ToolCardProps {
   tool: AiTool | FirebaseTool;
+  onUpdateTool?: (toolId: string, toolData: any) => Promise<void>;
+  onDeleteTool?: (toolId: string) => Promise<void>;
+  categories?: string[];
 }
 
-const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
+const ToolCard: React.FC<ToolCardProps> = ({ tool, onUpdateTool, onDeleteTool, categories = [] }) => {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [firebaseToolData, setFirebaseToolData] = useState<FirebaseTool | null>(null);
   
   // 토스트 메시지 관리
   const { showSuccess, showError } = useToast();
+  
+  // 인증 정보
+  const { user } = useAuthContext();
   
   // Firebase 설정 확인
   const firebaseConfigured = isFirebaseConfigured();
@@ -86,6 +95,18 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
   // 최신 댓글 데이터 (Firebase 설정된 경우에만)
   const { data: recentComments } = useRecentComments(firebaseConfigured ? toolId : '', 3);
   
+  // 현재 사용자가 도구 작성자인지 확인
+  const isOwner = user && isFirebaseTool(tool) && tool.createdBy === user.uid;
+  
+
+  
+  // 편집 핸들러
+  const handleEdit = () => {
+    if (isOwner && onUpdateTool) {
+      setIsEditModalOpen(true);
+    }
+  };
+  
   const PlanBadge: React.FC<{ plan: string | null }> = ({ plan }) => {
     if (!plan) return null;
     const baseClasses = "inline-block text-xs font-semibold px-2.5 py-0.5 rounded-full";
@@ -118,9 +139,23 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
               )}
             </div>
           </div>
-          <a href={tool.url} target="_blank" rel="noopener noreferrer" className="block text-xl leading-tight font-bold text-slate-900 hover:text-sky-600 transition-colors duration-200 mt-1">
-            {tool.name}
-          </a>
+          <div className="flex items-center gap-2 mt-1">
+            <a href={tool.url} target="_blank" rel="noopener noreferrer" className="text-xl leading-tight font-bold text-slate-900 hover:text-sky-600 transition-colors duration-200 flex-1">
+              {tool.name}
+            </a>
+            {/* 편집 버튼 (작성자만 표시) */}
+            {isOwner && onUpdateTool && (
+              <button
+                onClick={handleEdit}
+                className="p-1 text-slate-400 hover:text-slate-600 transition-colors duration-200 rounded"
+                title="도구 편집"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+            )}
+          </div>
           <p className="mt-2 text-slate-600 text-sm flex-grow">{tool.description}</p>
           {tool.memo && (
             <p className="mt-3 text-xs text-slate-500 bg-slate-100 p-2 rounded-md">
@@ -258,6 +293,20 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
         onSuccess={showSuccess}
         onError={showError}
       />
+
+      {/* 편집 모달 (Firebase 도구이고 작성자인 경우만) */}
+      {isOwner && onUpdateTool && isFirebaseTool(tool) && (
+        <EditToolModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          tool={tool}
+          onUpdateTool={onUpdateTool}
+          onDeleteTool={onDeleteTool}
+          categories={categories}
+          onSuccess={showSuccess}
+          onError={showError}
+        />
+      )}
     </>
   );
 };
