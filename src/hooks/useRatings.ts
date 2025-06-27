@@ -43,11 +43,10 @@ export function useRatings(toolId: string): FirestoreQueryResult<FirebaseRating>
       setIsLoading(true);
       setError(null);
 
-      // 특정 도구의 모든 평점 실시간 구독 (생성 시간순 정렬)
+      // 특정 도구의 모든 평점 실시간 구독 (인덱스 없이 작동하도록 단순화)
       const ratingsQuery = query(
         collection(db, 'ratings'),
-        where('toolId', '==', toolId),
-        orderBy('createdAt', 'desc')
+        where('toolId', '==', toolId)
       );
 
       const unsubscribe = onSnapshot(
@@ -67,12 +66,16 @@ export function useRatings(toolId: string): FirestoreQueryResult<FirebaseRating>
             });
           });
           
+          // 클라이언트에서 최신순으로 정렬
+          ratings.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+          
           setData(ratings);
           setIsLoading(false);
         },
         (error) => {
           console.error('❌ 평점 목록 조회 실패:', error);
-          setError('평점을 불러오는 중 오류가 발생했습니다.');
+          console.error('❌ 오류 상세:', error.code, error.message);
+          setError(`평점을 불러오는 중 오류가 발생했습니다: ${error.message}`);
           setIsLoading(false);
         }
       );

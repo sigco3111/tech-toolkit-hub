@@ -357,7 +357,7 @@ const AddToolModal: React.FC<AddToolModalProps> = ({
                   disabled={isLoading}
                 >
                   <option value="">선택하지 않음</option>
-                  <option value="완전무료">완전무료</option>
+                  <option value="무료">무료</option>
                   <option value="프리미엄">프리미엄</option>
                   <option value="유료">유료</option>
                 </select>
