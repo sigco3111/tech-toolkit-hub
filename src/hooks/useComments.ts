@@ -43,11 +43,10 @@ export function useComments(toolId: string): FirestoreQueryResult<FirebaseCommen
       setIsLoading(true);
       setError(null);
 
-      // 특정 도구의 모든 댓글 실시간 구독 (생성 시간순 정렬)
+      // 특정 도구의 모든 댓글 실시간 구독 (인덱스 없이 작동하도록 단순화)
       const commentsQuery = query(
         collection(db, 'comments'),
-        where('toolId', '==', toolId),
-        orderBy('createdAt', 'asc')
+        where('toolId', '==', toolId)
       );
 
       const unsubscribe = onSnapshot(
@@ -70,12 +69,16 @@ export function useComments(toolId: string): FirestoreQueryResult<FirebaseCommen
             });
           });
           
+          // 클라이언트에서 생성 시간순으로 정렬
+          comments.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+          
           setData(comments);
           setIsLoading(false);
         },
         (error) => {
           console.error('❌ 댓글 목록 조회 실패:', error);
-          setError('댓글을 불러오는 중 오류가 발생했습니다.');
+          console.error('❌ 오류 상세:', error.code, error.message);
+          setError(`댓글을 불러오는 중 오류가 발생했습니다: ${error.message}`);
           setIsLoading(false);
         }
       );
@@ -240,44 +243,44 @@ export function useRecentComments(toolId: string, limit: number = 5): FirestoreQ
       setIsLoading(true);
       setError(null);
 
-      // 최신 댓글 N개 실시간 구독 (최상위 댓글만)
+      // 최신 댓글 N개 실시간 구독 (인덱스 없이 작동하도록 단순화)
       const recentCommentsQuery = query(
         collection(db, 'comments'),
         where('toolId', '==', toolId),
-        where('parentId', '==', null), // 최상위 댓글만
-        orderBy('createdAt', 'desc')
+        where('parentId', '==', null) // 최상위 댓글만
       );
 
       const unsubscribe = onSnapshot(
         recentCommentsQuery,
         (snapshot) => {
           const comments: FirebaseComment[] = [];
-          let count = 0;
           
           snapshot.forEach((doc) => {
-            if (count < limit) {
-              const data = doc.data();
-              comments.push({
-                id: doc.id,
-                toolId: data.toolId,
-                userId: data.userId,
-                userName: data.userName,
-                userPhotoURL: data.userPhotoURL || null,
-                content: data.content,
-                parentId: data.parentId || null,
-                createdAt: data.createdAt?.toDate() || new Date(),
-                updatedAt: data.updatedAt?.toDate() || new Date()
-              });
-              count++;
-            }
+            const data = doc.data();
+            comments.push({
+              id: doc.id,
+              toolId: data.toolId,
+              userId: data.userId,
+              userName: data.userName,
+              userPhotoURL: data.userPhotoURL || null,
+              content: data.content,
+              parentId: data.parentId || null,
+              createdAt: data.createdAt?.toDate() || new Date(),
+              updatedAt: data.updatedAt?.toDate() || new Date()
+            });
           });
           
-          setData(comments);
+          // 클라이언트에서 최신순으로 정렬하고 제한된 개수만 반환
+          comments.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+          const limitedComments = comments.slice(0, limit);
+          
+          setData(limitedComments);
           setIsLoading(false);
         },
         (error) => {
           console.error('❌ 최신 댓글 조회 실패:', error);
-          setError('최신 댓글을 불러오는 중 오류가 발생했습니다.');
+          console.error('❌ 오류 상세:', error.code, error.message);
+          setError(`최신 댓글을 불러오는 중 오류가 발생했습니다: ${error.message}`);
           setIsLoading(false);
         }
       );

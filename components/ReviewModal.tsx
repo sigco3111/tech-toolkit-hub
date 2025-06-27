@@ -23,6 +23,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose }) => {
   const [showComments, setShowComments] = useState(true);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
+  const [editingComment, setEditingComment] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
 
   // Firebase 설정 확인
   const firebaseConfigured = isFirebaseConfigured();
@@ -57,6 +59,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose }) => {
     parentComments,
     getReplies,
     addComment,
+    updateComment,
+    deleteComment,
     commentCount,
     isLoading: commentsLoading,
     error: commentsError
@@ -168,6 +172,68 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose }) => {
   };
 
   /**
+   * 댓글 수정 핸들러
+   */
+  const handleCommentEdit = async (commentId: string) => {
+    if (!editText.trim()) return;
+
+    if (!canUseFirebaseFeatures) {
+      alert('Firebase 설정이 필요합니다.');
+      return;
+    }
+
+    setIsSubmittingComment(true);
+    try {
+      await updateComment(commentId, editText.trim());
+      setEditingComment(null);
+      setEditText('');
+    } catch (error: any) {
+      console.error('댓글 수정 실패:', error);
+      alert(error.message || '댓글 수정 중 오류가 발생했습니다.');
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  /**
+   * 댓글 삭제 핸들러
+   */
+  const handleCommentDelete = async (commentId: string) => {
+    if (!confirm('댓글을 삭제하시겠습니까?')) return;
+
+    if (!canUseFirebaseFeatures) {
+      alert('Firebase 설정이 필요합니다.');
+      return;
+    }
+
+    setIsSubmittingComment(true);
+    try {
+      await deleteComment(commentId);
+    } catch (error: any) {
+      console.error('댓글 삭제 실패:', error);
+      alert(error.message || '댓글 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  /**
+   * 댓글 수정 시작
+   */
+  const startEditComment = (comment: FirebaseComment) => {
+    setEditingComment(comment.id);
+    setEditText(comment.content);
+  };
+
+  /**
+   * 댓글 수정 취소
+   */
+  const cancelEditComment = () => {
+    setEditingComment(null);
+    setEditText('');
+  };
+
+  /**
    * 댓글 컴포넌트
    */
   const CommentItem: React.FC<{ comment: FirebaseComment; isReply?: boolean }> = ({ comment, isReply = false }) => {
@@ -176,27 +242,80 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose }) => {
     return (
       <div className={`${isReply ? 'ml-8 border-l-2 border-slate-200 pl-4' : ''}`}>
         <div className="bg-slate-50 rounded-lg p-3 mb-2">
-          <div className="flex items-center gap-2 mb-2">
-            {comment.userPhotoURL && (
-              <img 
-                src={comment.userPhotoURL} 
-                alt={comment.userName}
-                className="w-6 h-6 rounded-full"
-              />
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              {comment.userPhotoURL && (
+                <img 
+                  src={comment.userPhotoURL} 
+                  alt={comment.userName}
+                  className="w-6 h-6 rounded-full"
+                />
+              )}
+              <span className="font-medium text-sm text-slate-700">{comment.userName}</span>
+              <span className="text-xs text-slate-500">
+                {comment.createdAt.toLocaleDateString()}
+              </span>
+            </div>
+            {/* 작성자 본인만 수정/삭제 가능 */}
+            {user && user.uid === comment.userId && (
+              <div className="flex gap-1">
+                <button
+                  onClick={() => startEditComment(comment)}
+                  className="text-xs text-slate-500 hover:text-slate-700"
+                >
+                  수정
+                </button>
+                <button
+                  onClick={() => handleCommentDelete(comment.id)}
+                  className="text-xs text-red-500 hover:text-red-700"
+                >
+                  삭제
+                </button>
+              </div>
             )}
-            <span className="font-medium text-sm text-slate-700">{comment.userName}</span>
-            <span className="text-xs text-slate-500">
-              {comment.createdAt.toLocaleDateString()}
-            </span>
           </div>
-          <p className="text-sm text-slate-800 mb-2">{comment.content}</p>
-          {!isReply && (
-            <button
-              onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-              className="text-xs text-sky-600 hover:text-sky-800"
-            >
-              답글
-            </button>
+          
+          {/* 댓글 내용 또는 수정 폼 */}
+          {editingComment === comment.id ? (
+            <div className="space-y-2">
+              <textarea
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                className="w-full p-2 text-sm border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                rows={2}
+                maxLength={1000}
+              />
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-500">{editText.length}/1000</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={cancelEditComment}
+                    className="px-2 py-1 text-xs text-slate-600 hover:text-slate-800"
+                  >
+                    취소
+                  </button>
+                  <button
+                    onClick={() => handleCommentEdit(comment.id)}
+                    disabled={!editText.trim() || isSubmittingComment}
+                    className="px-3 py-1 bg-sky-500 text-white text-xs rounded-md hover:bg-sky-600 disabled:bg-slate-300 disabled:cursor-not-allowed"
+                  >
+                    수정 완료
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm text-slate-800 mb-2">{comment.content}</p>
+              {!isReply && (
+                <button
+                  onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                  className="text-xs text-sky-600 hover:text-sky-800"
+                >
+                  답글
+                </button>
+              )}
+            </>
           )}
         </div>
 
@@ -253,6 +372,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose }) => {
       setCommentText('');
       setReplyText('');
       setReplyingTo(null);
+      setEditingComment(null);
+      setEditText('');
     }
   }, [isOpen]);
 
