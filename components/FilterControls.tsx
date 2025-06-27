@@ -61,6 +61,10 @@ const FilterControls: React.FC<FilterControlsProps> = ({
             <option value="rating_asc">별점 낮은 순</option>
             <option value="name_asc">이름 오름차순</option>
             <option value="name_desc">이름 내림차순</option>
+            <option value="created_desc">최신 등록 순</option>
+            <option value="created_asc">오래된 등록 순</option>
+            <option value="updated_desc">최근 업데이트 순</option>
+            <option value="updated_asc">오래된 업데이트 순</option>
           </select>
         </div>
       </div>
