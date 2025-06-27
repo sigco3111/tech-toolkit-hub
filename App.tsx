@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { AiTool, SortOption, FirebaseTool, ToolInput } from './types';
 import ToolCard from './components/ToolCard';
 import FilterControls from './components/FilterControls';
-import { CategoryChart } from './components/CategoryChart';
+import { SiteStatistics } from './components/SiteStatistics';
 import UserAuth from './components/UserAuth';
 import AddToolModal from './components/AddToolModal';
 import { ToastContainer } from './src/components/Toast';
@@ -366,13 +366,10 @@ const AppContent: React.FC = () => {
             onFreeOnlyChange={setFreeOnly}
           />
 
-          {/* 카테고리별 평균 별점 차트 */}
+          {/* 사이트 주요 통계 정보 */}
           {(!firebaseConfigured || (!isLoading && aiToolsData.length > 0)) && (
-            <section className="my-12 p-6 bg-white rounded-xl shadow-md">
-              <h2 className="text-2xl font-bold text-center text-slate-800 mb-4">카테고리별 평균 별점</h2>
-              <div className="relative w-full h-[400px] max-h-[50vh]">
-                <CategoryChart data={aiToolsData as AiTool[]} />
-              </div>
+            <section className="my-8">
+              <SiteStatistics data={aiToolsData} />
             </section>
           )}
 
