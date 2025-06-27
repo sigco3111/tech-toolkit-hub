@@ -19,7 +19,7 @@ import { FirebaseTool, ToolInput, FirestoreQueryResult, SortOption } from '../..
  * @param sortOrder 정렬 옵션
  * @returns 도구 목록, 로딩 상태, 에러, 도구 추가 함수
  */
-export function useTools(category?: string, sortOrder: SortOption = 'rating_desc'): FirestoreQueryResult<FirebaseTool> & {
+export function useTools(category?: string, sortOrder: SortOption = 'created_desc'): FirestoreQueryResult<FirebaseTool> & {
   addTool: (toolData: ToolInput, userId: string) => Promise<void>;
   categories: string[];
 } {
@@ -55,6 +55,18 @@ export function useTools(category?: string, sortOrder: SortOption = 'rating_desc
           break;
         case 'name_desc':
           constraints.push(orderBy('name', 'desc'));
+          break;
+        case 'created_desc':
+          constraints.push(orderBy('createdAt', 'desc'));
+          break;
+        case 'created_asc':
+          constraints.push(orderBy('createdAt', 'asc'));
+          break;
+        case 'updated_desc':
+          constraints.push(orderBy('updatedAt', 'desc'));
+          break;
+        case 'updated_asc':
+          constraints.push(orderBy('updatedAt', 'asc'));
           break;
         default:
           constraints.push(orderBy('createdAt', 'desc'));

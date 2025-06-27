@@ -61,7 +61,7 @@ const EmptyState: React.FC = () => (
 const AppContent: React.FC = () => {
   const { isAuthenticated, user } = useAuthContext();
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortOrder, setSortOrder] = useState<SortOption>('rating_desc');
+  const [sortOrder, setSortOrder] = useState<SortOption>('created_desc');
   const [selectedCategory, setSelectedCategory] = useState('전체');
   const [isAddToolModalOpen, setIsAddToolModalOpen] = useState(false);
   
@@ -117,6 +117,14 @@ const AppContent: React.FC = () => {
     return AI_TOOLS_DATA;
   }, [firebaseConfigured, firebaseTools, isLoading, error]);
 
+  // 원본 Firebase 데이터 (ToolCard에서 날짜 정보 사용)
+  const originalFirebaseTools = useMemo(() => {
+    if (firebaseConfigured && firebaseTools.length > 0) {
+      return firebaseTools;
+    }
+    return [];
+  }, [firebaseConfigured, firebaseTools]);
+
   // 기존 필터링 및 정렬 로직 유지
   const filteredAndSortedTools = useMemo(() => {
     let filteredTools = aiToolsData;
@@ -142,6 +150,12 @@ const AppContent: React.FC = () => {
           return a.name.localeCompare(b.name);
         case 'name_desc':
           return b.name.localeCompare(a.name);
+        case 'created_desc':
+        case 'created_asc':
+        case 'updated_desc':
+        case 'updated_asc':
+          // 정적 데이터에는 날짜 정보가 없으므로 이름순으로 정렬
+          return a.name.localeCompare(b.name);
         default:
           return 0;
       }
@@ -172,6 +186,28 @@ const AppContent: React.FC = () => {
 
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8">
+      {/* Dev Canvas 카드 - 좌측 상단 고정 */}
+      <div className="fixed top-4 left-4 z-50">
+        <a
+          href="https://dev-canvas-pi.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1"
+        >
+          <div className="px-3 py-2 flex items-center gap-2">
+            <div className="w-6 h-6 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+            <div className="text-sm">
+              <div className="font-semibold leading-tight">Dev Canvas</div>
+              <div className="text-xs opacity-90">개발 도구</div>
+            </div>
+          </div>
+        </a>
+      </div>
+
       <header className="text-center mb-12">
         <div className="flex justify-between items-start mb-6">
           <div className="flex-1">

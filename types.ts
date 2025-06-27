@@ -8,7 +8,7 @@ export interface AiTool {
   plan: string | null;
 }
 
-export type SortOption = 'rating_desc' | 'rating_asc' | 'name_asc' | 'name_desc';
+export type SortOption = 'rating_desc' | 'rating_asc' | 'name_asc' | 'name_desc' | 'created_desc' | 'created_asc' | 'updated_desc' | 'updated_asc';
 
 // Firebase 관련 타입 정의
 
