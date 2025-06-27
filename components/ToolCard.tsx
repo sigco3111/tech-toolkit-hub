@@ -4,6 +4,7 @@ import StarRating from './StarRating';
 import ReviewModal from './ReviewModal';
 import { useRatings } from '../src/hooks/useRatings';
 import { useRecentComments } from '../src/hooks/useComments';
+import { useToast } from '../src/hooks/useToast';
 import { isFirebaseConfigured } from '../src/lib/firebase';
 
 interface ToolCardProps {
@@ -12,6 +13,9 @@ interface ToolCardProps {
 
 const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  
+  // 토스트 메시지 관리
+  const { showSuccess, showError } = useToast();
   
   // Firebase 설정 확인
   const firebaseConfigured = isFirebaseConfigured();
@@ -24,12 +28,24 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
   // 도구 ID 결정: Firebase 도구면 실제 ID, 정적 도구면 name을 ID로 사용
   const toolId = isFirebaseTool(tool) ? tool.id : tool.name;
   
-  // 도구 평점 정보 추출
-  const displayRating = isFirebaseTool(tool) ? tool.averageRating : tool.rating;
-  
   // Firebase 평점 데이터 (Firebase 설정된 경우에만)
   const ratingsData = useRatings(firebaseConfigured ? toolId : '');
-  const { ratingCount } = ratingsData;
+  const { averageRating: firebaseAverageRating, ratingCount } = ratingsData;
+  
+  // 도구 평점 정보 추출 - Firebase 설정된 경우 실시간 평균 평점 사용
+  const displayRating = firebaseConfigured 
+    ? firebaseAverageRating  // 실시간으로 계산된 평균 평점 사용
+    : (isFirebaseTool(tool) ? tool.averageRating : tool.rating); // Firebase 미설정 시 기존 로직
+  
+  // 디버깅용 로그 (개발 환경에서만)
+  if (process.env.NODE_ENV === 'development' && firebaseConfigured) {
+    console.log(`🔍 [${tool.name}] 평점 정보:`, {
+      firebaseAverageRating,
+      toolAverageRating: isFirebaseTool(tool) ? tool.averageRating : 'N/A',
+      displayRating,
+      ratingCount
+    });
+  }
   
   // 최신 댓글 데이터 (Firebase 설정된 경우에만)
   const { data: recentComments } = useRecentComments(firebaseConfigured ? toolId : '', 3);
@@ -59,7 +75,7 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
             </div>
             <div className="flex flex-col items-end">
               <StarRating rating={displayRating} />
-              {isFirebaseTool(tool) && ratingCount > 0 && (
+              {firebaseConfigured && ratingCount > 0 && (
                 <span className="text-xs text-slate-400 mt-0.5">
                   {ratingCount}명 평가
                 </span>
@@ -146,6 +162,8 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool }) => {
         tool={tool}
         isOpen={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}
+        onSuccess={showSuccess}
+        onError={showError}
       />
     </>
   );

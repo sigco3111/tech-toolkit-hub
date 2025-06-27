@@ -8,6 +8,8 @@ interface AddToolModalProps {
   onClose: () => void;
   onAddTool: (toolData: ToolInput) => Promise<void>;
   categories: string[];
+  onSuccess?: (message: string) => void;
+  onError?: (message: string) => void;
 }
 
 
@@ -20,7 +22,9 @@ const AddToolModal: React.FC<AddToolModalProps> = ({
   isOpen, 
   onClose, 
   onAddTool, 
-  categories 
+  categories,
+  onSuccess,
+  onError
 }) => {
   const { user } = useAuth();
   
@@ -125,13 +129,16 @@ const AddToolModal: React.FC<AddToolModalProps> = ({
     e.preventDefault();
     
     if (!user) {
-      setError('로그인이 필요합니다.');
+      const errorMsg = '로그인이 필요합니다.';
+      setError(errorMsg);
+      onError?.(errorMsg);
       return;
     }
 
     const validationError = validateForm();
     if (validationError) {
       setError(validationError);
+      onError?.(validationError);
       return;
     }
 
@@ -142,14 +149,20 @@ const AddToolModal: React.FC<AddToolModalProps> = ({
       await onAddTool(formData);
       setSuccess(true);
       
-      // 성공 메시지 표시 후 모달 닫기
+      // 성공 메시지 표시
+      const successMsg = `${formData.name} 도구가 성공적으로 추가되었습니다!`;
+      onSuccess?.(successMsg);
+      
+      // 성공 후 모달 닫기
       setTimeout(() => {
         handleClose();
       }, 1500);
       
     } catch (err: any) {
       console.error('❌ 도구 추가 실패:', err);
-      setError(err.message || '도구 추가 중 오류가 발생했습니다.');
+      const errorMsg = err.message || '도구 추가 중 오류가 발생했습니다.';
+      setError(errorMsg);
+      onError?.(errorMsg);
     } finally {
       setIsLoading(false);
     }

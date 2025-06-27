@@ -10,13 +10,15 @@ interface ReviewModalProps {
   tool: AiTool | FirebaseTool;
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: (message: string) => void;
+  onError?: (message: string) => void;
 }
 
 /**
  * 별점과 댓글을 함께 관리할 수 있는 통합 리뷰 모달
  * Firebase 도구에 대해서만 활성화되며, 로그인한 사용자만 사용 가능합니다.
  */
-const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose }) => {
+const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSuccess, onError }) => {
   const { isAuthenticated, user } = useAuthContext();
   const [commentText, setCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
@@ -81,21 +83,29 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose }) => {
    */
   const handleRatingSubmit = async (rating: number): Promise<void> => {
     if (!user) {
-      throw new Error('로그인이 필요합니다.');
+      const errorMsg = '로그인이 필요합니다.';
+      onError?.(errorMsg);
+      throw new Error(errorMsg);
     }
 
     if (!canUseFirebaseFeatures) {
-      throw new Error('Firebase 설정이 필요합니다.');
+      const errorMsg = 'Firebase 설정이 필요합니다.';
+      onError?.(errorMsg);
+      throw new Error(errorMsg);
     }
 
     try {
       if (userRating) {
         await updateRating(userRating.id, rating);
+        onSuccess?.('평점이 성공적으로 수정되었습니다.');
       } else {
         await addRating(user.uid, rating);
+        onSuccess?.('평점이 성공적으로 등록되었습니다.');
       }
     } catch (error: any) {
-      throw new Error(error.message || '평점 처리 중 오류가 발생했습니다.');
+      const errorMsg = error.message || '평점 처리 중 오류가 발생했습니다.';
+      onError?.(errorMsg);
+      throw new Error(errorMsg);
     }
   };
 
@@ -104,13 +114,18 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose }) => {
    */
   const handleRatingDelete = async (): Promise<void> => {
     if (!userRating) {
-      throw new Error('삭제할 평점이 없습니다.');
+      const errorMsg = '삭제할 평점이 없습니다.';
+      onError?.(errorMsg);
+      throw new Error(errorMsg);
     }
 
     try {
       await deleteRating(userRating.id);
+      onSuccess?.('평점이 성공적으로 삭제되었습니다.');
     } catch (error: any) {
-      throw new Error(error.message || '평점 삭제 중 오류가 발생했습니다.');
+      const errorMsg = error.message || '평점 삭제 중 오류가 발생했습니다.';
+      onError?.(errorMsg);
+      throw new Error(errorMsg);
     }
   };
 
@@ -121,7 +136,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose }) => {
     if (!user || !commentText.trim()) return;
 
     if (!canUseFirebaseFeatures) {
-      alert('Firebase 설정이 필요합니다.');
+      const errorMsg = 'Firebase 설정이 필요합니다.';
+      onError?.(errorMsg);
       return;
     }
 
@@ -134,9 +150,11 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose }) => {
         user.photoURL
       );
       setCommentText('');
+      onSuccess?.('댓글이 성공적으로 작성되었습니다.');
     } catch (error: any) {
       console.error('댓글 작성 실패:', error);
-      alert(error.message || '댓글 작성 중 오류가 발생했습니다.');
+      const errorMsg = error.message || '댓글 작성 중 오류가 발생했습니다.';
+      onError?.(errorMsg);
     } finally {
       setIsSubmittingComment(false);
     }
@@ -149,7 +167,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose }) => {
     if (!user || !replyText.trim()) return;
 
     if (!canUseFirebaseFeatures) {
-      alert('Firebase 설정이 필요합니다.');
+      const errorMsg = 'Firebase 설정이 필요합니다.';
+      onError?.(errorMsg);
       return;
     }
 
@@ -163,9 +182,11 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose }) => {
       );
       setReplyText('');
       setReplyingTo(null);
+      onSuccess?.('답글이 성공적으로 작성되었습니다.');
     } catch (error: any) {
       console.error('답글 작성 실패:', error);
-      alert(error.message || '답글 작성 중 오류가 발생했습니다.');
+      const errorMsg = error.message || '답글 작성 중 오류가 발생했습니다.';
+      onError?.(errorMsg);
     } finally {
       setIsSubmittingComment(false);
     }
@@ -178,7 +199,8 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose }) => {
     if (!editText.trim()) return;
 
     if (!canUseFirebaseFeatures) {
-      alert('Firebase 설정이 필요합니다.');
+      const errorMsg = 'Firebase 설정이 필요합니다.';
+      onError?.(errorMsg);
       return;
     }
 
@@ -187,9 +209,11 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose }) => {
       await updateComment(commentId, editText.trim());
       setEditingComment(null);
       setEditText('');
+      onSuccess?.('댓글이 성공적으로 수정되었습니다.');
     } catch (error: any) {
       console.error('댓글 수정 실패:', error);
-      alert(error.message || '댓글 수정 중 오류가 발생했습니다.');
+      const errorMsg = error.message || '댓글 수정 중 오류가 발생했습니다.';
+      onError?.(errorMsg);
     } finally {
       setIsSubmittingComment(false);
     }
@@ -202,16 +226,19 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose }) => {
     if (!confirm('댓글을 삭제하시겠습니까?')) return;
 
     if (!canUseFirebaseFeatures) {
-      alert('Firebase 설정이 필요합니다.');
+      const errorMsg = 'Firebase 설정이 필요합니다.';
+      onError?.(errorMsg);
       return;
     }
 
     setIsSubmittingComment(true);
     try {
       await deleteComment(commentId);
+      onSuccess?.('댓글이 성공적으로 삭제되었습니다.');
     } catch (error: any) {
       console.error('댓글 삭제 실패:', error);
-      alert(error.message || '댓글 삭제 중 오류가 발생했습니다.');
+      const errorMsg = error.message || '댓글 삭제 중 오류가 발생했습니다.';
+      onError?.(errorMsg);
     } finally {
       setIsSubmittingComment(false);
     }
