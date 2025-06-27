@@ -9,6 +9,8 @@ interface FilterControlsProps {
   onSearchChange: (term: string) => void;
   sortOrder: string;
   onSortChange: (order: string) => void;
+  freeOnly: boolean;
+  onFreeOnlyChange: (freeOnly: boolean) => void;
 }
 
 const FilterControls: React.FC<FilterControlsProps> = ({
@@ -19,6 +21,8 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   onSearchChange,
   sortOrder,
   onSortChange,
+  freeOnly,
+  onFreeOnlyChange,
 }) => {
   // 로컬 검색어 상태 (즉시 UI 업데이트용)
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
@@ -37,7 +41,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   }, [localSearchTerm, debouncedSearch]);
   return (
     <div className="bg-white p-4 rounded-xl shadow-md mb-8 sticky top-4 z-10">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="md:col-span-2">
           <label htmlFor="search-input" className="block text-sm font-medium text-slate-700 mb-1">이름으로 검색</label>
           <input
@@ -66,6 +70,17 @@ const FilterControls: React.FC<FilterControlsProps> = ({
             <option value="updated_desc">최근 업데이트 순</option>
             <option value="updated_asc">오래된 업데이트 순</option>
           </select>
+        </div>
+        <div>
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={freeOnly}
+              onChange={(e) => onFreeOnlyChange(e.target.checked)}
+              className="w-4 h-4 text-sky-600 bg-white border-slate-300 rounded focus:ring-sky-500 focus:ring-2"
+            />
+            무료 도구만 표시
+          </label>
         </div>
       </div>
       <div className="mt-4">

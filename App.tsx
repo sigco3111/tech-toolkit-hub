@@ -64,6 +64,7 @@ const AppContent: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState<SortOption>('created_desc');
   const [selectedCategory, setSelectedCategory] = useState('전체');
+  const [freeOnly, setFreeOnly] = useState(false);
   const [isAddToolModalOpen, setIsAddToolModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   
@@ -135,10 +136,14 @@ const AppContent: React.FC = () => {
 
   // 기존 필터링 및 정렬 로직 유지
   const filteredAndSortedTools = useMemo(() => {
+    console.log('🚀 필터링 시작:', { freeOnly, selectedCategory, searchTerm });
+    console.log('📊 원본 데이터:', aiToolsData.length, '개');
+    
     let filteredTools = aiToolsData;
 
     if (selectedCategory !== '전체') {
       filteredTools = filteredTools.filter(tool => tool.category === selectedCategory);
+      console.log('📂 카테고리 필터 후:', filteredTools.length, '개');
     }
 
     if (searchTerm) {
@@ -146,6 +151,23 @@ const AppContent: React.FC = () => {
         tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         tool.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
+      console.log('🔍 검색 필터 후:', filteredTools.length, '개');
+    }
+
+    // 무료 필터 적용
+    console.log('💰 무료 필터 체크 상태:', freeOnly);
+    if (freeOnly) {
+      console.log('🔍 무료 필터 적용 전:', filteredTools.length, '개');
+      console.log('📋 전체 도구 plan 값들:', filteredTools.map(tool => ({ name: tool.name, plan: tool.plan })));
+      
+      filteredTools = filteredTools.filter(tool => {
+        const isFree = tool.plan === '무료';
+        console.log(`📋 ${tool.name}: plan="${tool.plan}", isFree=${isFree}`);
+        return isFree;
+      });
+      
+      console.log('✅ 무료 필터 적용 후:', filteredTools.length, '개');
+      console.log('✅ 필터링된 도구들:', filteredTools.map(tool => ({ name: tool.name, plan: tool.plan })));
     }
 
     return [...filteredTools].sort((a, b) => {
@@ -173,7 +195,7 @@ const AppContent: React.FC = () => {
           return 0;
       }
     });
-  }, [aiToolsData, searchTerm, sortOrder, selectedCategory]);
+  }, [aiToolsData, searchTerm, sortOrder, selectedCategory, freeOnly]);
 
   // 페이징 처리된 데이터
   const paginatedTools = useMemo(() => {
@@ -188,7 +210,7 @@ const AppContent: React.FC = () => {
   // 필터나 검색이 변경될 때 첫 페이지로 이동
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCategory, sortOrder]);
+  }, [searchTerm, selectedCategory, sortOrder, freeOnly]);
 
   /**
    * 에러 발생 시 재시도 함수
@@ -340,6 +362,8 @@ const AppContent: React.FC = () => {
             onSearchChange={setSearchTerm}
             sortOrder={sortOrder}
             onSortChange={(value: string) => setSortOrder(value as SortOption)}
+            freeOnly={freeOnly}
+            onFreeOnlyChange={setFreeOnly}
           />
 
           {/* 카테고리별 평균 별점 차트 */}
