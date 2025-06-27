@@ -27,6 +27,29 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   // 로컬 검색어 상태 (즉시 UI 업데이트용)
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
   
+  // 카테고리 필터 토글 상태 (모바일에서 접었다 펼치기)
+  const [isCategoryExpanded, setIsCategoryExpanded] = useState(false);
+  
+  // 화면 크기 감지 상태
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // 화면 크기 변화 감지
+  useEffect(() => {
+    const checkIsMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      // 데스크톱으로 전환 시 카테고리 항상 펼침
+      if (!mobile) {
+        setIsCategoryExpanded(true);
+      }
+    };
+    
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    
+    return () => window.removeEventListener('resize', checkIsMobile);
+  }, []);
+  
   // 디바운스된 검색 함수 (500ms 지연)
   const debouncedSearch = useDebounce(onSearchChange, 500);
   
@@ -40,7 +63,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
     debouncedSearch(localSearchTerm);
   }, [localSearchTerm, debouncedSearch]);
   return (
-    <div className="bg-white p-4 rounded-xl shadow-md mb-8 sticky top-4 z-10">
+    <div className="bg-white p-3 md:p-4 rounded-xl shadow-md mb-6 md:mb-8 sticky top-2 md:top-4 z-10">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="md:col-span-2">
           <label htmlFor="search-input" className="block text-sm font-medium text-slate-700 mb-1">이름으로 검색</label>
@@ -84,12 +107,49 @@ const FilterControls: React.FC<FilterControlsProps> = ({
         </div>
       </div>
       <div className="mt-4">
-         <label className="block text-sm font-medium text-slate-700 mb-2">카테고리 필터</label>
-        <div className="flex flex-wrap gap-2">
+        {/* 카테고리 필터 헤더 (모바일에서 토글 버튼 포함) */}
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium text-slate-700">카테고리 필터</label>
+          
+          {/* 모바일에서만 보이는 토글 버튼 */}
+          <button
+            onClick={() => setIsCategoryExpanded(!isCategoryExpanded)}
+            className="md:hidden flex items-center gap-1 px-2 py-1 text-xs text-slate-600 hover:text-slate-800 transition-colors duration-200"
+            aria-label={isCategoryExpanded ? '카테고리 접기' : '카테고리 펼치기'}
+          >
+            <span>{isCategoryExpanded ? '접기' : '펼치기'}</span>
+            <svg 
+              className={`w-4 h-4 transition-transform duration-200 ${isCategoryExpanded ? 'rotate-180' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+          
+          {/* 데스크톱에서 현재 선택된 카테고리 표시 */}
+          <span className="hidden md:inline text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+            {selectedCategory}
+          </span>
+        </div>
+        
+        {/* 카테고리 버튼들 */}
+        <div className={`
+          flex flex-wrap gap-2 transition-all duration-300 ease-in-out
+          ${isCategoryExpanded ? 'md:flex' : 'hidden md:flex'}
+          ${isCategoryExpanded ? 'max-h-96 opacity-100' : 'md:max-h-96 md:opacity-100 max-h-0 opacity-0 overflow-hidden'}
+        `}>
           {categories.map(category => (
             <button
               key={category}
-              onClick={() => onCategoryChange(category)}
+                             onClick={() => {
+                 onCategoryChange(category);
+                 // 모바일에서 카테고리 선택 후 자동으로 접기
+                 if (isMobile) {
+                   setIsCategoryExpanded(false);
+                 }
+               }}
               className={`px-4 py-2 text-sm font-medium rounded-full shadow-sm hover:bg-slate-100 transition-colors duration-200 border border-slate-200 ${
                 selectedCategory === category
                   ? 'bg-sky-500 text-white font-bold shadow-md'
@@ -100,6 +160,22 @@ const FilterControls: React.FC<FilterControlsProps> = ({
             </button>
           ))}
         </div>
+        
+        {/* 모바일에서 카테고리가 접혀있을 때 현재 선택된 카테고리 표시 */}
+        {!isCategoryExpanded && (
+          <div className="md:hidden mt-2">
+            <span className="inline-flex items-center gap-2 text-sm text-slate-600 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200">
+              <span className="text-xs text-slate-500">현재 선택:</span>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                selectedCategory === '전체'
+                  ? 'bg-slate-200 text-slate-700'
+                  : 'bg-sky-100 text-sky-800'
+              }`}>
+                {selectedCategory}
+              </span>
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );
