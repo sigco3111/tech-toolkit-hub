@@ -282,7 +282,7 @@ const AppContent: React.FC = () => {
             </div>
             <div className="text-sm">
               <div className="font-semibold leading-tight">Dev Canvas</div>
-              <div className="text-xs opacity-90">개발 도구</div>
+              <div className="text-xs opacity-90">오픈소스 허브</div>
             </div>
           </div>
         </a>
