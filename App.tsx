@@ -13,6 +13,7 @@ import { useTools } from './src/hooks/useTools';
 import { useToast } from './src/hooks/useToast';
 import { isFirebaseConfigured } from './src/lib/firebase';
 import { AI_TOOLS_DATA, CATEGORIES } from './constants';
+import { Analytics } from "@vercel/analytics/next"
 
 
 
