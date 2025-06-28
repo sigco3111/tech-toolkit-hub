@@ -150,11 +150,10 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool, onUpdateTool, onDeleteTool, c
             {isOwner && onUpdateTool && (
               <button
                 onClick={handleEdit}
-                className="flex-shrink-0 p-2 bg-slate-600 text-white hover:bg-slate-700 transition-colors duration-200 rounded-lg shadow-sm"
+                className="flex-shrink-0 px-2 py-1 bg-slate-600 text-white hover:bg-slate-700 transition-colors duration-200 rounded text-xs"
                 title="편집"
-                style={{ minWidth: '70px' }}
               >
-                <span className="text-sm">✏️ 편집</span>
+                ✏️ 편집
               </button>
             )}
           </div>
