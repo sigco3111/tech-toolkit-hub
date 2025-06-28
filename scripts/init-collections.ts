@@ -1,5 +1,9 @@
 // Firebase 컬렉션 초기화 스크립트
+import { config } from 'dotenv';
 import { initializeApp } from 'firebase/app';
+
+// 환경변수 로드
+config();
 import { 
   getFirestore, 
   collection, 

@@ -2,7 +2,7 @@ import { AiTool } from './types';
 
 export const AI_TOOLS_DATA: AiTool[] = [
     {category: "AI 챗봇 / 대화형 AI", name: "Claude", url: "https://claude.ai/", description: "Anthropic에서 개발한 AI로, 더 안전하고 정직하며 유용한 대화에 중점을 둡니다.", memo: "LLM중 맥락을 가장 잘 이해함.", rating: 5, plan: null},
-    {category: "AI 챗봇 / 대화형 AI", name: "Gemini", url: "https://gemini.google.com/", description: "Google의 멀티모달 AI. 텍스트, 이미지, 오디오, 비디오 등 다양한 정보를 이해하고 처리합니다.", memo: "유밥 회사계정은 유료플랜", rating: 4.5, plan: null},
+    {category: "AI 챗봇 / 대화형 AI", name: "Gemini", url: "https://gemini.google.com/", description: "Google의 멀티모달 AI. 텍스트, 이미지, 오디오, 비디오 등 다양한 정보를 이해하고 처리합니다.", memo: "기업계정만 사용가능", rating: 4.5, plan: null},
     {category: "AI 챗봇 / 대화형 AI", name: "Grok", url: "https://grok.com/", description: "xAI가 개발한 AI. 최신 정보에 강하고, 유머 감각과 개성 있는 답변을 제공하는 것이 특징입니다.", memo: "무제한 사용가능", rating: 4.5, plan: null},
     {category: "AI 챗봇 / 대화형 AI", name: "ChatGPT", url: "https://chatgpt.com/", description: "OpenAI의 대표적인 대화형 AI. 글쓰기, 번역, 코딩, 창의적인 작업 등 범용성이 뛰어납니다.", memo: "", rating: 4, plan: null},
     {category: "AI 챗봇 / 대화형 AI", name: "Qwen", url: "https://chat.qwen.ai/", description: "Alibaba Cloud에서 개발한 대규모 언어 모델 기반 챗봇입니다.", memo: "중국산이지만 무제한으로 사용가능 (이미지/영상 생성도 무제한)", rating: 4, plan: '무료'},
@@ -21,7 +21,7 @@ export const AI_TOOLS_DATA: AiTool[] = [
     {category: "자동화 플랫폼", name: "Make", url: "https://www.make.com/", description: "코딩 없이 다양한 앱과 서비스를 연결하여 워크플로우를 시각적으로 자동화하는 플랫폼입니다.", memo: "UI가 편함.", rating: 4, plan: null},
     {category: "자동화 플랫폼", name: "Zapier", url: "https://zapier.com/", description: "가장 널리 쓰이는 웹 앱 자동화 도구 중 하나로, 수천 개의 앱을 연동하여 작업을 자동화합니다.", memo: "가장 호환성이 좋음.", rating: 4, plan: null},
     {category: "자동화 플랫폼", name: "n8n.io", url: "https://n8n.io/", description: "소스 코드가 공개된 워크플로우 자동화 도구로, 직접 서버에 설치하여 사용할 수도 있습니다.", memo: "오픈소스로 서버를 만들면 무료로 사용가능", rating: 4, plan: null},
-    {category: "AI 연구", name: "NotebookLM", url: "https://notebooklm.google.com/", description: "Google의 AI 기반 연구 및 글쓰기 보조 도구. 사용자가 업로드한 자료를 기반으로 답변합니다.", memo: "데이터 정리에 훌륭함. (유밥 회사계정은 유료플랜)", rating: 5, plan: null},
+    {category: "AI 연구", name: "NotebookLM", url: "https://notebooklm.google.com/", description: "Google의 AI 기반 연구 및 글쓰기 보조 도구. 사용자가 업로드한 자료를 기반으로 답변합니다.", memo: "데이터 정리에 유용함.", rating: 5, plan: null},
     {category: "AI 연구", name: "Hugging Face", url: "https://huggingface.co/", description: "AI 모델, 데이터셋, 데모를 공유하는 세계 최대의 머신러닝 커뮤니티 및 플랫폼입니다.", memo: "오픈소스 AI모델", rating: 5, plan: '무료'},
     {category: "AI 연구", name: "Google AI Studio", url: "https://aistudio.google.com/", description: "개발자들이 Google의 최신 생성형 AI 모델(Gemini 등)을 활용하여 앱을 만들 수 있는 도구입니다.", memo: "Chat / 멀티모달Chat / 이미지 / 영상 / 앱생성 / 음상 / 음악 생성… AI로 할 수 있는 거의 모든 것을 무료로 해볼 수 있음.", rating: 5, plan: '무료'},
     {category: "AI 연구", name: "GitHub Marketplace", url: "https://github.com/marketplace?type=models", description: "GitHub에서 제공하는 AI 모델 마켓플레이스로, 다양한 머신러닝 모델을 찾고 사용할 수 있습니다.", memo: "다양한 LLM모델을 무료로 사용할 수 있음.", rating: 5, plan: '무료'},
