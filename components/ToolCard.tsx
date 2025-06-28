@@ -78,26 +78,22 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool, onUpdateTool, onDeleteTool, c
     ? firebaseAverageRating  // 실시간으로 계산된 평균 평점 사용
     : (isFirebaseTool(tool) ? tool.averageRating : tool.rating); // Firebase 미설정 시 기존 로직
   
-  // 디버깅용 로그 (개발 환경에서만)
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`🔍 [${tool.name}] 도구 정보:`, {
-      firebaseConfigured,
-      isFirebaseTool: isFirebaseTool(tool),
-      hasCreatedAt: isFirebaseTool(tool) ? !!tool.createdAt : false,
-      hasUpdatedAt: isFirebaseTool(tool) ? !!tool.updatedAt : false,
-      toolType: isFirebaseTool(tool) ? 'Firebase' : 'Static',
-      firebaseAverageRating,
-      displayRating,
-      ratingCount
-    });
-  }
+
   
   // 최신 댓글 데이터 (Firebase 설정된 경우에만)
   const { data: recentComments } = useRecentComments(firebaseConfigured ? toolId : '', 3);
   
-  // 현재 사용자가 도구 작성자인지 확인
-  const isOwner = user && isFirebaseTool(tool) && tool.createdBy === user.uid;
+  // 관리자 계정 목록 (필요시 환경변수로 관리 가능)
+  const ADMIN_UIDS = ['lyGcWH33rYTlRnaBaIz6kQJI03']; // 현재 사용자를 관리자로 추가
   
+  // 현재 사용자가 도구 작성자인지 확인
+  // Firebase 도구의 경우: 실제 작성자 또는 관리자
+  // 정적 도구의 경우: 로그인한 사용자는 모두 편집 가능 (개발 환경용)
+  const isOwner = user && (
+    (isFirebaseTool(tool) && (tool.createdBy === user.uid || ADMIN_UIDS.includes(user.uid))) ||
+    (!isFirebaseTool(tool) && !firebaseConfigured)
+  );
+
 
   
   // 편집 핸들러
@@ -139,23 +135,32 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool, onUpdateTool, onDeleteTool, c
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2 mt-1">
-            <a href={tool.url} target="_blank" rel="noopener noreferrer" className="text-xl leading-tight font-bold text-slate-900 hover:text-sky-600 transition-colors duration-200 flex-1">
+          <div className="flex items-start justify-between gap-3 mt-1">
+            <a 
+              href={tool.url} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-xl leading-tight font-bold text-slate-900 hover:text-sky-600 transition-colors duration-200 break-words"
+              style={{ maxWidth: 'calc(100% - 100px)' }}
+            >
               {tool.name}
             </a>
-            {/* 편집 버튼 (작성자만 표시) */}
+            
+            {/* 편집 버튼 - 소유자에게만 표시 */}
             {isOwner && onUpdateTool && (
               <button
                 onClick={handleEdit}
-                className="p-1 text-slate-400 hover:text-slate-600 transition-colors duration-200 rounded"
-                title="도구 편집"
+                className="flex-shrink-0 p-2 bg-slate-600 text-white hover:bg-slate-700 transition-colors duration-200 rounded-lg shadow-sm"
+                title="편집"
+                style={{ minWidth: '70px' }}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
+                <span className="text-sm">✏️ 편집</span>
               </button>
             )}
           </div>
+          
+
+          
           <p className="mt-2 text-slate-600 text-sm flex-grow">{tool.description}</p>
           {tool.memo && (
             <p className="mt-3 text-xs text-slate-500 bg-slate-100 p-2 rounded-md">
@@ -294,8 +299,8 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool, onUpdateTool, onDeleteTool, c
         onError={showError}
       />
 
-      {/* 편집 모달 (Firebase 도구이고 작성자인 경우만) */}
-      {isOwner && onUpdateTool && isFirebaseTool(tool) && (
+      {/* 편집 모달 (작성자인 경우) */}
+      {isOwner && onUpdateTool && (
         <EditToolModal
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}

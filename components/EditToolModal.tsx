@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ToolInput, FirebaseTool } from '../types';
+import { ToolInput, FirebaseTool, AiTool } from '../types';
 
 interface EditToolModalProps {
   isOpen: boolean;
   onClose: () => void;
-  tool: FirebaseTool;
+  tool: AiTool | FirebaseTool;
   onUpdateTool: (toolId: string, toolData: ToolInput) => Promise<void>;
   onDeleteTool?: (toolId: string) => Promise<void>;
   categories: string[];
@@ -38,6 +38,16 @@ const EditToolModal: React.FC<EditToolModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Partial<ToolInput>>({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Firebase 도구인지 확인하는 타입 가드
+  const isFirebaseTool = (tool: AiTool | FirebaseTool): tool is FirebaseTool => {
+    return 'id' in tool && 'averageRating' in tool;
+  };
+
+  // 도구 ID 결정: Firebase 도구면 실제 ID, 정적 도구면 name을 ID로 사용
+  const getToolId = (tool: AiTool | FirebaseTool): string => {
+    return isFirebaseTool(tool) ? tool.id : tool.name;
+  };
 
   // 도구 정보가 변경될 때 폼 데이터 초기화
   useEffect(() => {
@@ -134,7 +144,7 @@ const EditToolModal: React.FC<EditToolModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      await onUpdateTool(tool.id, formData);
+      await onUpdateTool(getToolId(tool), formData);
       onSuccess('도구가 성공적으로 수정되었습니다.');
       onClose();
     } catch (error: any) {
@@ -170,7 +180,7 @@ const EditToolModal: React.FC<EditToolModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      await onDeleteTool(tool.id);
+      await onDeleteTool(getToolId(tool));
       onSuccess('도구가 성공적으로 삭제되었습니다.');
       onClose();
     } catch (error: any) {

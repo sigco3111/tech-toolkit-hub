@@ -417,8 +417,8 @@ const AppContent: React.FC = () => {
                     <ToolCard 
                       key={`${tool.name}-${index}`} 
                       tool={tool} 
-                      onUpdateTool={firebaseConfigured ? handleUpdateTool : undefined}
-                      onDeleteTool={firebaseConfigured ? handleDeleteTool : undefined}
+                      onUpdateTool={handleUpdateTool}
+                      onDeleteTool={handleDeleteTool}
                       categories={categories}
                     />
                   ))}
