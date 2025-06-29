@@ -16,6 +16,23 @@ import { db } from '../lib/firebase';
 import { FirebaseComment, CommentInput, FirestoreQueryResult } from '../../types';
 
 /**
+ * 도구의 업데이트 날짜를 갱신하는 유틸리티 함수
+ * @param toolId 도구 ID
+ */
+const updateToolUpdatedAt = async (toolId: string): Promise<void> => {
+  try {
+    const toolDoc = doc(db, 'tools', toolId);
+    await updateDoc(toolDoc, {
+      updatedAt: serverTimestamp()
+    });
+    console.log('✅ 도구 업데이트 날짜 갱신 완료');
+  } catch (error: any) {
+    console.error('❌ 도구 업데이트 날짜 갱신 실패:', error);
+    // 도구 업데이트 실패는 치명적이지 않으므로 에러를 던지지 않음
+  }
+};
+
+/**
  * 특정 도구의 댓글 목록을 실시간으로 가져오는 훅
  * @param toolId 도구 ID
  * @returns 댓글 목록, 댓글 통계, 댓글 관리 함수들
@@ -127,6 +144,10 @@ export function useComments(toolId: string): FirestoreQueryResult<FirebaseCommen
       };
 
       await addDoc(collection(db, 'comments'), newComment);
+      
+      // 댓글이 추가된 도구의 업데이트 날짜도 갱신
+      await updateToolUpdatedAt(commentData.toolId);
+      
       console.log('✅ 댓글 추가 완료');
       
     } catch (error: any) {
@@ -151,11 +172,20 @@ export function useComments(toolId: string): FirestoreQueryResult<FirebaseCommen
         throw new Error('댓글은 1000자 이하로 작성해주세요.');
       }
 
+      // 수정할 댓글 찾기 (도구 ID 확인용)
+      const commentToUpdate = data.find(comment => comment.id === commentId);
+      if (!commentToUpdate) {
+        throw new Error('수정할 댓글을 찾을 수 없습니다.');
+      }
+
       const commentDoc = doc(db, 'comments', commentId);
       await updateDoc(commentDoc, {
         content: content.trim(),
         updatedAt: serverTimestamp()
       });
+
+      // 댓글이 수정된 도구의 업데이트 날짜도 갱신
+      await updateToolUpdatedAt(commentToUpdate.toolId);
 
       console.log('✅ 댓글 수정 완료');
       
@@ -171,6 +201,12 @@ export function useComments(toolId: string): FirestoreQueryResult<FirebaseCommen
    */
   const deleteComment = async (commentId: string): Promise<void> => {
     try {
+      // 삭제할 댓글 찾기 (도구 ID 확인용)
+      const commentToDelete = data.find(comment => comment.id === commentId);
+      if (!commentToDelete) {
+        throw new Error('삭제할 댓글을 찾을 수 없습니다.');
+      }
+
       // 해당 댓글의 답글들도 함께 삭제
       const replies = data.filter(comment => comment.parentId === commentId);
       
@@ -183,6 +219,9 @@ export function useComments(toolId: string): FirestoreQueryResult<FirebaseCommen
       // 원본 댓글 삭제
       const commentDoc = doc(db, 'comments', commentId);
       await deleteDoc(commentDoc);
+      
+      // 댓글이 삭제된 도구의 업데이트 날짜도 갱신
+      await updateToolUpdatedAt(commentToDelete.toolId);
       
       console.log('✅ 댓글 삭제 완료 (답글 포함)');
       

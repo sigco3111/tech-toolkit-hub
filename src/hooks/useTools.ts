@@ -22,7 +22,7 @@ import { FirebaseTool, ToolInput, FirestoreQueryResult, SortOption } from '../..
  * @param sortOrder 정렬 옵션
  * @returns 도구 목록, 로딩 상태, 에러, 도구 추가 함수
  */
-export function useTools(category?: string, sortOrder: SortOption = 'created_desc'): FirestoreQueryResult<FirebaseTool> & {
+export function useTools(category?: string, sortOrder: SortOption = 'updated_desc'): FirestoreQueryResult<FirebaseTool> & {
   addTool: (toolData: ToolInput, userId: string) => Promise<void>;
   updateTool: (toolId: string, toolData: ToolInput, userId: string) => Promise<void>;
   deleteTool: (toolId: string, userId: string) => Promise<void>;
