@@ -15,6 +15,75 @@ interface ReviewModalProps {
 }
 
 /**
+ * 답글 입력을 위한 컴포넌트
+ * 포커스 관리 및 상태 격리를 통해 입력 시 포커스 유지
+ */
+interface ReplyInputProps {
+  parentId: string;
+  onCancel: () => void;
+  onSubmit: (parentId: string, content: string) => Promise<void>;
+  isSubmitting: boolean;
+}
+
+const ReplyInput: React.FC<ReplyInputProps> = ({ parentId, onCancel, onSubmit, isSubmitting }) => {
+  // 컴포넌트 내부에서 상태 관리
+  const [replyText, setReplyText] = useState('');
+  // input 요소에 대한 참조 생성
+  const inputRef = useRef<HTMLInputElement>(null);
+  
+  // 컴포넌트가 마운트되면 자동으로 포커스 설정
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+  
+  // 입력 처리
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setReplyText(e.target.value);
+  };
+  
+  // 제출 처리
+  const handleSubmit = async () => {
+    if (!replyText.trim() || isSubmitting) return;
+    await onSubmit(parentId, replyText.trim());
+    setReplyText('');
+  };
+  
+  return (
+    <div className="ml-4 mb-3">
+      <input
+        ref={inputRef}
+        type="text"
+        value={replyText}
+        onChange={handleChange}
+        placeholder="답글을 작성해주세요..."
+        className="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+        maxLength={1000}
+      />
+      <div className="flex items-center justify-between mt-2">
+        <span className="text-xs text-slate-500">{replyText.length}/1000</span>
+        <div className="flex gap-2">
+          <button
+            onClick={onCancel}
+            className="px-2 py-1 text-xs text-slate-600 hover:text-slate-800"
+          >
+            취소
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!replyText.trim() || isSubmitting}
+            className="px-3 py-1 bg-sky-500 text-white text-xs rounded-md hover:bg-sky-600 disabled:bg-slate-300 disabled:cursor-not-allowed"
+          >
+            답글 작성
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/**
  * 별점과 댓글을 함께 관리할 수 있는 통합 리뷰 모달
  * Firebase 도구에 대해서만 활성화되며, 로그인한 사용자만 사용 가능합니다.
  */
@@ -24,12 +93,13 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [showComments, setShowComments] = useState(true);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState('');
   const [editingComment, setEditingComment] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   
   // contentEditable 요소에 대한 참조
   const editableRef = useRef<HTMLDivElement>(null);
+  // 댓글 입력 필드에 대한 참조
+  const commentInputRef = useRef<HTMLInputElement>(null);
   
   // Firebase 설정 확인
   const firebaseConfigured = isFirebaseConfigured();
@@ -38,6 +108,11 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
   const isFirebaseTool = (tool: AiTool | FirebaseTool): tool is FirebaseTool => {
     return 'id' in tool && 'averageRating' in tool;
   };
+
+  // 댓글 입력 변경 핸들러
+  const handleCommentChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setCommentText(e.target.value);
+  }, []);
 
   // Firebase 도구가 아니거나 Firebase가 설정되지 않은 경우에도 모달 표시
   const isFirebaseToolInstance = isFirebaseTool(tool);
@@ -135,7 +210,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
   /**
    * 댓글 제출 핸들러
    */
-  const handleCommentSubmit = async () => {
+  const handleCommentSubmit = useCallback(async () => {
     if (!user || !commentText.trim()) return;
 
     if (!canUseFirebaseFeatures) {
@@ -161,13 +236,13 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
     } finally {
       setIsSubmittingComment(false);
     }
-  };
+  }, [user, commentText, canUseFirebaseFeatures, toolId, addComment, onSuccess, onError]);
 
   /**
    * 답글 제출 핸들러
    */
-  const handleReplySubmit = async (parentId: string) => {
-    if (!user || !replyText.trim()) return;
+  const handleReplySubmit = useCallback(async (parentId: string, content: string) => {
+    if (!user || !content.trim()) return;
 
     if (!canUseFirebaseFeatures) {
       const errorMsg = 'Firebase 설정이 필요합니다.';
@@ -178,12 +253,11 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
     setIsSubmittingComment(true);
     try {
       await addComment(
-        { toolId: toolId, content: replyText.trim(), parentId },
+        { toolId: toolId, content: content.trim(), parentId },
         user.uid,
         user.displayName || '익명',
         user.photoURL
       );
-      setReplyText('');
       setReplyingTo(null);
       onSuccess?.('답글이 성공적으로 작성되었습니다.');
     } catch (error: any) {
@@ -193,7 +267,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
     } finally {
       setIsSubmittingComment(false);
     }
-  };
+  }, [user, canUseFirebaseFeatures, toolId, addComment, onSuccess, onError]);
 
   /**
    * 댓글 수정 핸들러
@@ -303,11 +377,21 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
     const [editLength, setEditLength] = useState(comment.content.length);
     
     // 내용 변경 감지
-    const handleContentChange = () => {
+    const handleContentChange = useCallback(() => {
       if (editableRef.current) {
         setEditLength(editableRef.current.innerText.length);
       }
-    };
+    }, []);
+    
+    // 답글 버튼 클릭 핸들러
+    const handleReplyClick = useCallback(() => {
+      setReplyingTo(replyingTo === comment.id ? null : comment.id);
+    }, [comment.id, replyingTo]);
+    
+    // 답글 취소 핸들러
+    const handleReplyCancel = useCallback(() => {
+      setReplyingTo(null);
+    }, []);
     
     return (
       <div className={`${isReply ? 'ml-8 border-l-2 border-slate-200 pl-4' : ''}`}>
@@ -379,7 +463,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
               <p className="text-sm text-slate-800 mb-2">{comment.content}</p>
               {!isReply && (
                 <button
-                  onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                  onClick={handleReplyClick}
                   className="text-xs text-sky-600 hover:text-sky-800"
                 >
                   답글
@@ -391,37 +475,12 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
 
         {/* 답글 입력 */}
         {replyingTo === comment.id && (
-          <div className="ml-4 mb-3">
-            <input
-              type="text"
-              value={replyText}
-              onChange={(e) => setReplyText(e.target.value)}
-              placeholder="답글을 작성해주세요..."
-              className="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-              maxLength={1000}
-            />
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-xs text-slate-500">{replyText.length}/1000</span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setReplyingTo(null);
-                    setReplyText('');
-                  }}
-                  className="px-2 py-1 text-xs text-slate-600 hover:text-slate-800"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={() => handleReplySubmit(comment.id)}
-                  disabled={!replyText.trim() || isSubmittingComment}
-                  className="px-3 py-1 bg-sky-500 text-white text-xs rounded-md hover:bg-sky-600 disabled:bg-slate-300 disabled:cursor-not-allowed"
-                >
-                  답글 작성
-                </button>
-              </div>
-            </div>
-          </div>
+          <ReplyInput
+            parentId={comment.id}
+            onCancel={handleReplyCancel}
+            onSubmit={handleReplySubmit}
+            isSubmitting={isSubmittingComment}
+          />
         )}
 
         {/* 답글 목록 */}
@@ -435,12 +494,19 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
       </div>
     );
   }, (prevProps, nextProps) => {
-    // comment의 내용이나 편집 상태가 변경되지 않았으면 리렌더링하지 않음
+    // comment의 내용이나 편집 상태, 답글 상태가 변경되지 않았으면 리렌더링하지 않음
+    const prevReplying = replyingTo === prevProps.comment.id;
+    const nextReplying = replyingTo === nextProps.comment.id;
+    const prevEditing = editingComment === prevProps.comment.id;
+    const nextEditing = editingComment === nextProps.comment.id;
+    
     return (
       prevProps.comment.id === nextProps.comment.id &&
       prevProps.comment.content === nextProps.comment.content &&
       prevProps.comment.updatedAt.getTime() === nextProps.comment.updatedAt.getTime() &&
-      prevProps.isReply === nextProps.isReply
+      prevProps.isReply === nextProps.isReply &&
+      prevReplying === nextReplying &&
+      prevEditing === nextEditing
     );
   });
 
@@ -448,12 +514,21 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
   useEffect(() => {
     if (!isOpen) {
       setCommentText('');
-      setReplyText('');
       setReplyingTo(null);
       setEditingComment(null);
       setEditText('');
     }
   }, [isOpen]);
+
+  // 댓글 입력 필드에 포커스 설정 (모달이 열릴 때)
+  useEffect(() => {
+    if (isOpen && isAuthenticated && commentInputRef.current) {
+      // 약간의 지연을 주어 DOM이 완전히 렌더링된 후 포커스 설정
+      setTimeout(() => {
+        commentInputRef.current?.focus();
+      }, 100);
+    }
+  }, [isOpen, isAuthenticated]);
 
   if (!isOpen) return null;
 
@@ -523,9 +598,10 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
               <div className="space-y-3">
                 <h3 className="font-semibold text-slate-900">댓글 작성</h3>
                 <input
+                  ref={commentInputRef}
                   type="text"
                   value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
+                  onChange={handleCommentChange}
                   placeholder="이 도구에 대한 의견을 남겨주세요..."
                   className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                   maxLength={1000}
