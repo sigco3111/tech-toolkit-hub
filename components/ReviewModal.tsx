@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AiTool, FirebaseTool, FirebaseComment } from '../types';
 import RatingSystem from '../src/components/RatingSystem';
 import { useRatings } from '../src/hooks/useRatings';
@@ -27,7 +27,10 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
   const [replyText, setReplyText] = useState('');
   const [editingComment, setEditingComment] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
-
+  
+  // contentEditable 요소에 대한 참조
+  const editableRef = useRef<HTMLDivElement>(null);
+  
   // Firebase 설정 확인
   const firebaseConfigured = isFirebaseConfigured();
   
@@ -195,8 +198,11 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
   /**
    * 댓글 수정 핸들러
    */
-  const handleCommentEdit = async (commentId: string) => {
-    if (!editText.trim()) return;
+  const handleCommentEdit = useCallback(async (commentId: string) => {
+    // contentEditable div에서 내용 가져오기
+    const content = editableRef.current?.innerText.trim() || '';
+    
+    if (!content) return;
 
     if (!canUseFirebaseFeatures) {
       const errorMsg = 'Firebase 설정이 필요합니다.';
@@ -206,7 +212,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
 
     setIsSubmittingComment(true);
     try {
-      await updateComment(commentId, editText.trim());
+      await updateComment(commentId, content);
       setEditingComment(null);
       setEditText('');
       onSuccess?.('댓글이 성공적으로 수정되었습니다.');
@@ -217,12 +223,20 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
     } finally {
       setIsSubmittingComment(false);
     }
-  };
+  }, [canUseFirebaseFeatures, updateComment, onError, onSuccess]);
+
+  /**
+   * 댓글 수정 취소
+   */
+  const cancelEditComment = useCallback(() => {
+    setEditingComment(null);
+    setEditText('');
+  }, []);
 
   /**
    * 댓글 삭제 핸들러
    */
-  const handleCommentDelete = async (commentId: string) => {
+  const handleCommentDelete = useCallback(async (commentId: string) => {
     if (!confirm('댓글을 삭제하시겠습니까?')) return;
 
     if (!canUseFirebaseFeatures) {
@@ -242,30 +256,59 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
     } finally {
       setIsSubmittingComment(false);
     }
-  };
+  }, [canUseFirebaseFeatures, deleteComment, onError, onSuccess]);
 
   /**
    * 댓글 수정 시작
    */
-  const startEditComment = (comment: FirebaseComment) => {
+  const startEditComment = useCallback((comment: FirebaseComment) => {
     setEditingComment(comment.id);
     setEditText(comment.content);
-  };
-
-  /**
-   * 댓글 수정 취소
-   */
-  const cancelEditComment = () => {
-    setEditingComment(null);
-    setEditText('');
-  };
+    
+    // 다음 렌더링 주기에서 contentEditable에 포커스 설정
+    setTimeout(() => {
+      if (editableRef.current) {
+        // 내용 설정
+        editableRef.current.innerText = comment.content;
+        
+        // 포커스 설정
+        editableRef.current.focus();
+        
+        // 커서를 맨 뒤로 이동
+        const selection = window.getSelection();
+        const range = document.createRange();
+        
+        if (selection && editableRef.current.childNodes.length > 0) {
+          const lastNode = editableRef.current.childNodes[editableRef.current.childNodes.length - 1];
+          const lastNodeLength = lastNode.textContent?.length || 0;
+          
+          range.setStart(lastNode, lastNodeLength);
+          range.collapse(true);
+          
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      }
+    }, 0);
+  }, []);
 
   /**
    * 댓글 컴포넌트
    */
-  const CommentItem: React.FC<{ comment: FirebaseComment; isReply?: boolean }> = ({ comment, isReply = false }) => {
+  const CommentItem: React.FC<{ comment: FirebaseComment; isReply?: boolean }> = React.memo(({ comment, isReply = false }) => {
     const replies = getReplies(comment.id);
-
+    const isEditing = editingComment === comment.id;
+    
+    // 수정 중인 댓글의 내용 길이 추적
+    const [editLength, setEditLength] = useState(comment.content.length);
+    
+    // 내용 변경 감지
+    const handleContentChange = () => {
+      if (editableRef.current) {
+        setEditLength(editableRef.current.innerText.length);
+      }
+    };
+    
     return (
       <div className={`${isReply ? 'ml-8 border-l-2 border-slate-200 pl-4' : ''}`}>
         <div className="bg-slate-50 rounded-lg p-3 mb-2">
@@ -303,17 +346,17 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
           </div>
           
           {/* 댓글 내용 또는 수정 폼 */}
-          {editingComment === comment.id ? (
+          {isEditing ? (
             <div className="space-y-2">
-              <textarea
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                className="w-full p-2 text-sm border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                rows={2}
-                maxLength={1000}
+              <div
+                ref={editableRef}
+                contentEditable
+                onInput={handleContentChange}
+                className="w-full p-2 text-sm border border-slate-300 rounded-lg min-h-[4rem] focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+                style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
               />
               <div className="flex items-center justify-between">
-                <span className="text-xs text-slate-500">{editText.length}/1000</span>
+                <span className="text-xs text-slate-500">{editLength}/1000</span>
                 <div className="flex gap-2">
                   <button
                     onClick={cancelEditComment}
@@ -323,7 +366,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
                   </button>
                   <button
                     onClick={() => handleCommentEdit(comment.id)}
-                    disabled={!editText.trim() || isSubmittingComment}
+                    disabled={isSubmittingComment}
                     className="px-3 py-1 bg-sky-500 text-white text-xs rounded-md hover:bg-sky-600 disabled:bg-slate-300 disabled:cursor-not-allowed"
                   >
                     수정 완료
@@ -349,12 +392,12 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
         {/* 답글 입력 */}
         {replyingTo === comment.id && (
           <div className="ml-4 mb-3">
-            <textarea
+            <input
+              type="text"
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
               placeholder="답글을 작성해주세요..."
-              className="w-full p-2 text-sm border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-              rows={2}
+              className="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
               maxLength={1000}
             />
             <div className="flex items-center justify-between mt-2">
@@ -391,7 +434,15 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
         )}
       </div>
     );
-  };
+  }, (prevProps, nextProps) => {
+    // comment의 내용이나 편집 상태가 변경되지 않았으면 리렌더링하지 않음
+    return (
+      prevProps.comment.id === nextProps.comment.id &&
+      prevProps.comment.content === nextProps.comment.content &&
+      prevProps.comment.updatedAt.getTime() === nextProps.comment.updatedAt.getTime() &&
+      prevProps.isReply === nextProps.isReply
+    );
+  });
 
   // 모달이 닫힐 때 상태 초기화
   useEffect(() => {
@@ -471,12 +522,12 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
             {isAuthenticated && canUseFirebaseFeatures && (
               <div className="space-y-3">
                 <h3 className="font-semibold text-slate-900">댓글 작성</h3>
-                <textarea
+                <input
+                  type="text"
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
                   placeholder="이 도구에 대한 의견을 남겨주세요..."
-                  className="w-full p-3 border border-slate-300 rounded-lg resize-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
-                  rows={3}
+                  className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                   maxLength={1000}
                 />
                 <div className="flex items-center justify-between">
