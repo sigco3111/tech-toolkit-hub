@@ -292,7 +292,7 @@ const AppContent: React.FC = () => {
       <header className="text-center mb-12">
         <div className="flex justify-between items-start mb-6">
           <div className="flex-1">
-            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-3">Tech Toolkit Hub</h1>
+            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-3">AI 테크 허브</h1>
             <p className="text-lg text-slate-600 max-w-3xl mx-auto">AI와 개발에 필요한 도구를 한 곳에서 탐색해 보세요.</p>
           </div>
           <div className="ml-4 flex-shrink-0">
@@ -439,7 +439,7 @@ const AppContent: React.FC = () => {
       )}
 
       <footer className="text-center p-6 mt-12 border-t border-slate-200">
-        <p className="text-slate-500 text-sm">Tech Toolkit Hub | 정보는 주기적으로 업데이트될 수 있습니다.</p>
+        <p className="text-slate-500 text-sm">AI 테크 허브 | 정보는 주기적으로 업데이트될 수 있습니다.</p>
       </footer>
 
       {/* 도구 추가 모달 */}
