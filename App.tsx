@@ -63,7 +63,7 @@ const EmptyState: React.FC = () => (
 const AppContent: React.FC = () => {
   const { isAuthenticated, user } = useAuthContext();
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortOrder, setSortOrder] = useState<SortOption>('created_desc');
+  const [sortOrder, setSortOrder] = useState<SortOption>('updated_desc');
   const [selectedCategory, setSelectedCategory] = useState('전체');
   const [freeOnly, setFreeOnly] = useState(false);
   const [isAddToolModalOpen, setIsAddToolModalOpen] = useState(false);
@@ -79,7 +79,7 @@ const AppContent: React.FC = () => {
   const firebaseConfigured = isFirebaseConfigured();
   
   // Firebase에서 실시간 도구 데이터 가져오기 (Firebase 설정된 경우에만)
-  const firebaseData = useTools();
+  const firebaseData = useTools(selectedCategory, sortOrder);
   
   // 데이터 소스 결정 (Firebase 설정 여부에 따라)
   const { data: firebaseTools, isLoading, error, categories, addTool, updateTool, deleteTool } = firebaseConfigured 
@@ -171,32 +171,40 @@ const AppContent: React.FC = () => {
       console.log('✅ 필터링된 도구들:', filteredTools.map(tool => ({ name: tool.name, plan: tool.plan })));
     }
 
-    return [...filteredTools].sort((a, b) => {
-      // 타입 가드 함수
-      const isFirebaseTool = (tool: AiTool | FirebaseTool): tool is FirebaseTool => 'averageRating' in tool;
-      const getToolRating = (tool: AiTool | FirebaseTool): number => 
-        isFirebaseTool(tool) ? tool.averageRating : tool.rating;
-      
-      switch (sortOrder) {
-        case 'rating_desc':
-          return getToolRating(b) - getToolRating(a);
-        case 'rating_asc':
-          return getToolRating(a) - getToolRating(b);
-        case 'name_asc':
-          return a.name.localeCompare(b.name);
-        case 'name_desc':
-          return b.name.localeCompare(a.name);
-        case 'created_desc':
-        case 'created_asc':
-        case 'updated_desc':
-        case 'updated_asc':
-          // 정적 데이터에는 날짜 정보가 없으므로 이름순으로 정렬
-          return a.name.localeCompare(b.name);
-        default:
-          return 0;
-      }
-    });
-  }, [aiToolsData, searchTerm, sortOrder, selectedCategory, freeOnly]);
+    // Firebase 도구의 경우 서버에서 이미 정렬되어 있으므로 추가 정렬 불필요
+    // 정적 데이터의 경우에만 클라이언트에서 정렬
+    if (firebaseConfigured && firebaseTools.length > 0) {
+      // Firebase 데이터는 이미 서버에서 정렬되어 있으므로 그대로 반환
+      return filteredTools;
+    } else {
+      // 정적 데이터는 클라이언트에서 정렬
+      return [...filteredTools].sort((a, b) => {
+        // 타입 가드 함수
+        const isFirebaseTool = (tool: AiTool | FirebaseTool): tool is FirebaseTool => 'averageRating' in tool;
+        const getToolRating = (tool: AiTool | FirebaseTool): number => 
+          isFirebaseTool(tool) ? tool.averageRating : tool.rating;
+        
+        switch (sortOrder) {
+          case 'rating_desc':
+            return getToolRating(b) - getToolRating(a);
+          case 'rating_asc':
+            return getToolRating(a) - getToolRating(b);
+          case 'name_asc':
+            return a.name.localeCompare(b.name);
+          case 'name_desc':
+            return b.name.localeCompare(a.name);
+          case 'created_desc':
+          case 'created_asc':
+          case 'updated_desc':
+          case 'updated_asc':
+            // 정적 데이터에는 날짜 정보가 없으므로 이름순으로 정렬
+            return a.name.localeCompare(b.name);
+          default:
+            return 0;
+        }
+      });
+    }
+  }, [aiToolsData, searchTerm, sortOrder, selectedCategory, freeOnly, firebaseConfigured, firebaseTools]);
 
   // 페이징 처리된 데이터
   const paginatedTools = useMemo(() => {
