@@ -10,27 +10,41 @@ import { isFirebaseConfigured } from '../src/lib/firebase';
 import { useAuthContext } from '../src/contexts/AuthContext';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../src/lib/firebase';
+import { useBookmarks } from '../src/hooks/useBookmarks';
 
 interface ToolCardProps {
   tool: AiTool | FirebaseTool;
   onUpdateTool?: (toolId: string, toolData: any) => Promise<void>;
   onDeleteTool?: (toolId: string) => Promise<void>;
   categories?: string[];
+  onBookmarkChange?: () => void;
 }
 
-const ToolCard: React.FC<ToolCardProps> = ({ tool, onUpdateTool, onDeleteTool, categories = [] }) => {
+const ToolCard: React.FC<ToolCardProps> = ({ tool, onUpdateTool, onDeleteTool, categories = [], onBookmarkChange }) => {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [firebaseToolData, setFirebaseToolData] = useState<FirebaseTool | null>(null);
+  
+  // 북마크 관련 상태
+  const [isBookmarked, setIsBookmarked] = useState(false);
+  const [isBookmarkProcessing, setIsBookmarkProcessing] = useState(false);
   
   // 토스트 메시지 관리
   const { showSuccess, showError } = useToast();
   
   // 인증 정보
-  const { user } = useAuthContext();
+  const { user, isAuthenticated } = useAuthContext();
   
   // Firebase 설정 확인
   const firebaseConfigured = isFirebaseConfigured();
+  
+  // 북마크 관련 훅
+  const { 
+    addBookmark, 
+    removeBookmark, 
+    bookmarkedToolIds, 
+    isLoading: isBookmarksLoading
+  } = useBookmarks();
   
   // Firebase 도구인지 확인하는 타입 가드
   const isFirebaseTool = (tool: AiTool | FirebaseTool): tool is FirebaseTool => {
@@ -39,6 +53,61 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool, onUpdateTool, onDeleteTool, c
   
   // 도구 ID 결정: Firebase 도구면 실제 ID, 정적 도구면 name을 ID로 사용
   const toolId = isFirebaseTool(tool) ? tool.id : tool.name;
+  
+  // 북마크 상태 초기화 및 업데이트
+  useEffect(() => {
+    if (isAuthenticated && bookmarkedToolIds) {
+      const bookmarked = bookmarkedToolIds.includes(toolId);
+      console.log(`🔖 ToolCard - 도구 "${tool.name}" (ID: ${toolId}) 북마크 상태:`, bookmarked);
+      setIsBookmarked(bookmarked);
+    } else {
+      setIsBookmarked(false);
+    }
+  }, [isAuthenticated, bookmarkedToolIds, toolId, tool.name]);
+  
+  // 북마크 토글 함수
+  const handleBookmarkToggle = async () => {
+    if (!isAuthenticated) {
+      showError('북마크 기능을 사용하려면 로그인이 필요합니다.');
+      return;
+    }
+    
+    if (isBookmarkProcessing) {
+      console.log('🔖 북마크 처리 중입니다. 잠시 기다려주세요.');
+      return;
+    }
+    
+    try {
+      setIsBookmarkProcessing(true);
+      console.log(`🔖 북마크 토글 시작 - 현재 상태: ${isBookmarked ? '북마크됨' : '북마크되지 않음'}`);
+      
+      if (isBookmarked) {
+        console.log(`🔖 북마크 제거 시도 - 도구: "${tool.name}" (ID: ${toolId})`);
+        await removeBookmark(toolId);
+        showSuccess('북마크가 제거되었습니다.');
+        console.log(`✅ 북마크 제거 성공 - 도구: "${tool.name}" (ID: ${toolId})`);
+      } else {
+        console.log(`🔖 북마크 추가 시도 - 도구: "${tool.name}" (ID: ${toolId})`);
+        await addBookmark(toolId);
+        showSuccess('북마크가 추가되었습니다.');
+        console.log(`✅ 북마크 추가 성공 - 도구: "${tool.name}" (ID: ${toolId})`);
+      }
+      
+      // 북마크 상태 즉시 업데이트 (UI 반응성 향상)
+      setIsBookmarked(!isBookmarked);
+      
+      // 북마크 상태 변경 후 콜백 호출 (App.tsx에서 북마크 목록 새로고침)
+      if (onBookmarkChange) {
+        console.log(`🔖 ToolCard - 도구 ID ${toolId}의 북마크 상태 변경 후 콜백 호출`);
+        onBookmarkChange();
+      }
+    } catch (error) {
+      console.error('🔴 북마크 토글 실패:', error);
+      showError(`북마크 ${isBookmarked ? '제거' : '추가'} 중 오류가 발생했습니다.`);
+    } finally {
+      setIsBookmarkProcessing(false);
+    }
+  };
   
   // Firebase에서 실제 도구 데이터 조회 (날짜 정보 포함)
   useEffect(() => {
@@ -146,16 +215,46 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool, onUpdateTool, onDeleteTool, c
               {tool.name}
             </a>
             
-            {/* 편집 버튼 - 소유자에게만 표시 */}
-            {isOwner && onUpdateTool && (
-              <button
-                onClick={handleEdit}
-                className="flex-shrink-0 px-2 py-1 bg-slate-600 text-white hover:bg-slate-700 transition-colors duration-200 rounded text-xs"
-                title="편집"
-              >
-                ✏️ 편집
-              </button>
-            )}
+            <div className="flex gap-2">
+              {/* 북마크 버튼 */}
+              {isAuthenticated && (
+                <button
+                  onClick={handleBookmarkToggle}
+                  disabled={isBookmarkProcessing || isBookmarksLoading}
+                  className={`p-1.5 rounded-full transition-colors duration-200 ${
+                    isBookmarked 
+                      ? 'bg-amber-50 text-amber-500 hover:bg-amber-100' 
+                      : 'bg-gray-50 text-gray-400 hover:bg-gray-100'
+                  }`}
+                  aria-label={isBookmarked ? '북마크 제거' : '북마크 추가'}
+                >
+                  <svg 
+                    className={`w-5 h-5 ${isBookmarkProcessing ? 'animate-pulse' : ''}`}
+                    fill={isBookmarked ? 'currentColor' : 'none'} 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                      strokeWidth={isBookmarked ? "0" : "2"} 
+                      d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" 
+                    />
+                  </svg>
+                </button>
+              )}
+              
+              {/* 편집 버튼 - 소유자에게만 표시 */}
+              {isOwner && onUpdateTool && (
+                <button
+                  onClick={handleEdit}
+                  className="flex-shrink-0 px-2 py-1 bg-slate-600 text-white hover:bg-slate-700 transition-colors duration-200 rounded text-xs"
+                  title="편집"
+                >
+                  ✏️ 편집
+                </button>
+              )}
+            </div>
           </div>
           
 
@@ -209,106 +308,72 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool, onUpdateTool, onDeleteTool, c
                   )}
                 </div>
               );
-            } else {
-              // 정적 데이터이고 Firebase에서 찾지 못한 경우 고정된 날짜 표시
-              return (
-                <div className="mt-3 text-xs text-slate-400 space-y-1">
-                  <div className="flex items-center gap-1">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
-                    <span>등록: 2024.1.1</span>
-                  </div>
-                </div>
-              );
             }
+            return null;
           })()}
           
-          {/* 최신 댓글 표시 (Firebase 설정된 경우에만) */}
-          {firebaseConfigured && recentComments.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-slate-100">
+          {/* 최신 댓글 표시 */}
+          {firebaseConfigured && recentComments && recentComments.length > 0 && (
+            <div className="mt-4">
               <h4 className="text-xs font-semibold text-slate-700 mb-2">최근 댓글</h4>
               <div className="space-y-2">
-                {recentComments.slice(0, 2).map((comment) => (
-                  <div key={comment.id} className="bg-slate-50 rounded-md p-2">
-                    <div className="flex items-center gap-1 mb-1">
-                      {comment.userPhotoURL && (
-                        <img 
-                          src={comment.userPhotoURL} 
-                          alt={comment.userName}
-                          className="w-4 h-4 rounded-full"
-                        />
-                      )}
-                      <span className="text-xs font-medium text-slate-600">{comment.userName}</span>
-                      <span className="text-xs text-slate-400">
-                        {comment.createdAt.toLocaleDateString()}
-                      </span>
+                {recentComments.map(comment => (
+                  <div key={comment.id} className="bg-slate-50 p-2 rounded-md">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs font-medium text-slate-700">{comment.userName}</span>
+                      <span className="text-xs text-slate-400">{comment.createdAt.toLocaleDateString('ko-KR')}</span>
                     </div>
-                    <p className="text-xs text-slate-700" style={{
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden'
-                    }}>
-                      {comment.content}
-                    </p>
+                    <p className="text-xs text-slate-600 line-clamp-2">{comment.content}</p>
                   </div>
                 ))}
-                {recentComments.length > 2 && (
-                  <button
-                    onClick={() => setIsReviewModalOpen(true)}
-                    className="text-xs text-sky-600 hover:text-sky-800 font-medium"
-                  >
-                    댓글 {recentComments.length - 2}개 더보기
-                  </button>
-                )}
               </div>
             </div>
           )}
           
-          {/* 리뷰 작성 버튼 - 항상 표시 */}
-          <div className="mt-4 pt-3 border-t border-slate-200">
-            <button
-              onClick={() => setIsReviewModalOpen(true)}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors duration-200 text-sm font-medium"
+          {/* 버튼 영역 */}
+          <div className="mt-4 flex flex-col gap-2">
+            <a 
+              href={tool.url}
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="w-full py-2 text-center bg-indigo-600 hover:bg-indigo-700 text-white rounded-md transition-colors duration-200"
             >
-              <span>⭐</span>
-              <span>리뷰 작성</span>
-            </button>
+              웹사이트 방문
+            </a>
+            {firebaseConfigured && user && (
+              <button 
+                onClick={() => setIsReviewModalOpen(true)}
+                className="w-full py-2 text-center bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md transition-colors duration-200"
+              >
+                리뷰 작성
+              </button>
+            )}
           </div>
         </div>
-        <div className="px-6 pb-6 pt-2">
-          <a
-            href={tool.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full text-center block bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-4 rounded-lg transition-colors duration-300"
-          >
-            사이트 방문하기
-          </a>
-        </div>
       </div>
-
+      
       {/* 리뷰 모달 */}
-      <ReviewModal
-        tool={tool}
-        isOpen={isReviewModalOpen}
-        onClose={() => setIsReviewModalOpen(false)}
-        onSuccess={showSuccess}
-        onError={showError}
-      />
-
-      {/* 편집 모달 (작성자인 경우) */}
-      {isOwner && onUpdateTool && (
+      {isReviewModalOpen && (
+        <ReviewModal 
+          isOpen={isReviewModalOpen} 
+          onClose={() => setIsReviewModalOpen(false)} 
+          tool={tool} 
+          onSuccess={(message) => showSuccess(message)}
+          onError={(message) => showError(message)}
+        />
+      )}
+      
+      {/* 편집 모달 */}
+      {isEditModalOpen && onUpdateTool && onDeleteTool && (
         <EditToolModal
           isOpen={isEditModalOpen}
           onClose={() => setIsEditModalOpen(false)}
-          tool={tool}
+          tool={isFirebaseTool(tool) ? tool : { ...tool, id: tool.name }}
           onUpdateTool={onUpdateTool}
           onDeleteTool={onDeleteTool}
           categories={categories}
-          onSuccess={showSuccess}
-          onError={showError}
+          onSuccess={(message) => showSuccess(message)}
+          onError={(message) => showError(message)}
         />
       )}
     </>

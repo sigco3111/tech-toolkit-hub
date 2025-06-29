@@ -5,40 +5,45 @@ import FilterControls from './components/FilterControls';
 import { SiteStatistics } from './components/SiteStatistics';
 import UserAuth from './components/UserAuth';
 import AddToolModal from './components/AddToolModal';
+import ReviewModal from './components/ReviewModal';
 import { ToastContainer } from './src/components/Toast';
 import Pagination from './components/Pagination';
 import { ToolListSkeleton, ChartSkeleton, FilterSkeleton } from './src/components/LoadingSkeleton';
 import { AuthProvider, useAuthContext } from './src/contexts/AuthContext';
 import { useTools } from './src/hooks/useTools';
 import { useToast } from './src/hooks/useToast';
+import { useBookmarks } from './src/hooks/useBookmarks';
 import { isFirebaseConfigured } from './src/lib/firebase';
 import { AI_TOOLS_DATA, CATEGORIES } from './constants';
-import { Analytics } from "@vercel/analytics/next"
-
-
+import { Analytics } from "@vercel/analytics/react"
 
 /**
  * 에러 표시 컴포넌트
  */
-const ErrorDisplay: React.FC<{ error: string; onRetry: () => void }> = ({ error, onRetry }) => (
-  <div className="text-center py-12">
-    <div className="max-w-md mx-auto">
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-        <svg className="w-12 h-12 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-        </svg>
-        <h3 className="text-lg font-medium text-red-800 mb-2">데이터 로딩 오류</h3>
-        <p className="text-sm text-red-600 mb-4">{error}</p>
+const ErrorDisplay: React.FC<{ error: string | null; onRetry: () => void }> = ({ error, onRetry }) => {
+  return (
+    <div className="bg-red-50 border border-red-200 rounded-xl p-6 my-8 text-center">
+      <div className="flex flex-col items-center justify-center gap-4">
+        <div className="rounded-full bg-red-100 p-3">
+          <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-medium text-red-800">데이터 로딩 오류</h3>
+        <p className="text-sm text-red-700 mb-4">{error}</p>
         <button
           onClick={onRetry}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors duration-200 flex items-center gap-2"
         >
-          다시 시도
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>다시 시도</span>
         </button>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 /**
  * 빈 데이터 표시 컴포넌트
@@ -62,12 +67,34 @@ const EmptyState: React.FC = () => (
  */
 const AppContent: React.FC = () => {
   const { isAuthenticated, user } = useAuthContext();
-  const [searchTerm, setSearchTerm] = useState('');
+  
+  // 필터 상태를 하나의 객체로 관리
+  const [filters, setFilters] = useState({
+    freeOnly: false,
+    bookmarkedOnly: false,
+    selectedCategory: '전체',
+    searchTerm: '',
+    isAuthenticated: false,
+  });
+  
+  // 정렬 상태는 별도로 관리 (기존 코드와의 호환성)
   const [sortOrder, setSortOrder] = useState<SortOption>('updated_desc');
-  const [selectedCategory, setSelectedCategory] = useState('전체');
-  const [freeOnly, setFreeOnly] = useState(false);
   const [isAddToolModalOpen, setIsAddToolModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // 리뷰 모달 상태 관리
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [selectedTool, setSelectedTool] = useState<AiTool | FirebaseTool | null>(null);
+  
+  // 인증 상태가 변경될 때 필터 상태 업데이트
+  useEffect(() => {
+    setFilters(prev => ({
+      ...prev,
+      isAuthenticated,
+      // 로그인하지 않은 상태에서는 북마크 필터 비활성화
+      bookmarkedOnly: isAuthenticated ? prev.bookmarkedOnly : false
+    }));
+  }, [isAuthenticated]);
   
   // 페이징 설정
   const ITEMS_PER_PAGE = 40;
@@ -78,8 +105,18 @@ const AppContent: React.FC = () => {
   // Firebase 설정 확인
   const firebaseConfigured = isFirebaseConfigured();
   
+  // 사용자 북마크 데이터 가져오기
+  const { bookmarkedToolIds, isLoading: isBookmarksLoading, error: bookmarksError, refreshBookmarks } = useBookmarks();
+  
+  // 북마크 ID 목록 디버깅
+  useEffect(() => {
+    console.log('🔖 App - 북마크된 도구 ID 목록:', bookmarkedToolIds);
+    console.log('🔖 App - 북마크 로딩 상태:', isBookmarksLoading);
+    console.log('🔖 App - 북마크 에러:', bookmarksError);
+  }, [bookmarkedToolIds, isBookmarksLoading, bookmarksError]);
+  
   // Firebase에서 실시간 도구 데이터 가져오기 (Firebase 설정된 경우에만)
-  const firebaseData = useTools(selectedCategory, sortOrder);
+  const firebaseData = useTools(filters.selectedCategory, sortOrder);
   
   // 데이터 소스 결정 (Firebase 설정 여부에 따라)
   const { data: firebaseTools, isLoading, error, categories, addTool, updateTool, deleteTool } = firebaseConfigured 
@@ -93,19 +130,6 @@ const AppContent: React.FC = () => {
         updateTool: async () => { throw new Error('Firebase가 설정되지 않았습니다.'); },
         deleteTool: async () => { throw new Error('Firebase가 설정되지 않았습니다.'); }
       };
-
-  /**
-   * Firebase 도구를 기존 AiTool 형식으로 변환하는 함수
-   */
-  const convertToAiTool = (firebaseTool: FirebaseTool): AiTool => ({
-    category: firebaseTool.category,
-    name: firebaseTool.name,
-    url: firebaseTool.url,
-    description: firebaseTool.description,
-    memo: firebaseTool.memo,
-    rating: firebaseTool.averageRating, // averageRating을 rating으로 매핑
-    plan: firebaseTool.plan
-  });
 
   // 데이터 소스 결정: Firebase 데이터 또는 정적 데이터
   const aiToolsData: (AiTool | FirebaseTool)[] = useMemo(() => {
@@ -127,84 +151,123 @@ const AppContent: React.FC = () => {
     return AI_TOOLS_DATA;
   }, [firebaseConfigured, firebaseTools, isLoading, error]);
 
-  // 원본 Firebase 데이터 (ToolCard에서 날짜 정보 사용)
-  const originalFirebaseTools = useMemo(() => {
-    if (firebaseConfigured && firebaseTools.length > 0) {
-      return firebaseTools;
-    }
-    return [];
-  }, [firebaseConfigured, firebaseTools]);
-
-  // 기존 필터링 및 정렬 로직 유지
+  // 기존 필터링 및 정렬 로직에 북마크 필터링 추가
   const filteredAndSortedTools = useMemo(() => {
-    console.log('🚀 필터링 시작:', { freeOnly, selectedCategory, searchTerm });
+    console.log('🚀 필터링 시작:', { 
+      freeOnly: filters.freeOnly, 
+      bookmarkedOnly: filters.bookmarkedOnly, 
+      selectedCategory: filters.selectedCategory, 
+      searchTerm: filters.searchTerm,
+      isAuthenticated,
+      isBookmarksLoading,
+      bookmarkedToolIds: bookmarkedToolIds.length
+    });
     console.log('📊 원본 데이터:', aiToolsData.length, '개');
     
     let filteredTools = aiToolsData;
 
-    if (selectedCategory !== '전체') {
-      filteredTools = filteredTools.filter(tool => tool.category === selectedCategory);
+    // 카테고리 필터링
+    if (filters.selectedCategory !== '전체') {
+      filteredTools = filteredTools.filter(tool => tool.category === filters.selectedCategory);
       console.log('📂 카테고리 필터 후:', filteredTools.length, '개');
     }
 
-    if (searchTerm) {
+    // 검색어 필터링
+    if (filters.searchTerm) {
       filteredTools = filteredTools.filter(tool =>
-        tool.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tool.description.toLowerCase().includes(searchTerm.toLowerCase())
+        tool.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+        tool.description.toLowerCase().includes(filters.searchTerm.toLowerCase())
       );
       console.log('🔍 검색 필터 후:', filteredTools.length, '개');
     }
 
     // 무료 필터 적용
-    console.log('💰 무료 필터 체크 상태:', freeOnly);
-    if (freeOnly) {
-      console.log('🔍 무료 필터 적용 전:', filteredTools.length, '개');
-      console.log('📋 전체 도구 plan 값들:', filteredTools.map(tool => ({ name: tool.name, plan: tool.plan })));
+    if (filters.freeOnly) {
+      filteredTools = filteredTools.filter(tool => tool.plan === '무료');
+      console.log('💰 무료 필터 적용 후:', filteredTools.length, '개');
+    }
+    
+    // 북마크 필터 적용
+    if (filters.bookmarkedOnly && isAuthenticated && firebaseConfigured) {
+      console.log('🔖 북마크 필터 적용 전:', filteredTools.length, '개');
+      console.log('🔖 북마크된 도구 ID 목록:', bookmarkedToolIds);
       
+      // 북마크된 도구 ID 목록이 비어있는지 확인
+      if (bookmarkedToolIds.length === 0) {
+        console.log('⚠️ 북마크된 도구가 없습니다.');
+        return []; // 북마크가 없으면 빈 배열 반환
+      }
+      
+      // 도구 ID 추출 함수
+      const getToolId = (tool: AiTool | FirebaseTool): string => {
+        return 'id' in tool ? tool.id : tool.name;
+      };
+      
+      // 북마크 필터링 적용
       filteredTools = filteredTools.filter(tool => {
-        const isFree = tool.plan === '무료';
-        console.log(`📋 ${tool.name}: plan="${tool.plan}", isFree=${isFree}`);
-        return isFree;
+        const toolId = getToolId(tool);
+        const isBookmarked = bookmarkedToolIds.includes(toolId);
+        
+        console.log(`🔖 도구 "${tool.name}" (ID: ${toolId}) 북마크 여부:`, isBookmarked);
+        return isBookmarked;
       });
       
-      console.log('✅ 무료 필터 적용 후:', filteredTools.length, '개');
-      console.log('✅ 필터링된 도구들:', filteredTools.map(tool => ({ name: tool.name, plan: tool.plan })));
+      console.log('✅ 북마크 필터 적용 후:', filteredTools.length, '개');
+      console.log('✅ 북마크 필터링된 도구들:', filteredTools.map(tool => tool.name));
     }
 
-    // Firebase 도구의 경우 서버에서 이미 정렬되어 있으므로 추가 정렬 불필요
-    // 정적 데이터의 경우에만 클라이언트에서 정렬
-    if (firebaseConfigured && firebaseTools.length > 0) {
-      // Firebase 데이터는 이미 서버에서 정렬되어 있으므로 그대로 반환
-      return filteredTools;
-    } else {
-      // 정적 데이터는 클라이언트에서 정렬
-      return [...filteredTools].sort((a, b) => {
-        // 타입 가드 함수
-        const isFirebaseTool = (tool: AiTool | FirebaseTool): tool is FirebaseTool => 'averageRating' in tool;
-        const getToolRating = (tool: AiTool | FirebaseTool): number => 
-          isFirebaseTool(tool) ? tool.averageRating : tool.rating;
-        
-        switch (sortOrder) {
-          case 'rating_desc':
-            return getToolRating(b) - getToolRating(a);
-          case 'rating_asc':
-            return getToolRating(a) - getToolRating(b);
-          case 'name_asc':
-            return a.name.localeCompare(b.name);
-          case 'name_desc':
-            return b.name.localeCompare(a.name);
-          case 'created_desc':
-          case 'created_asc':
-          case 'updated_desc':
-          case 'updated_asc':
-            // 정적 데이터에는 날짜 정보가 없으므로 이름순으로 정렬
-            return a.name.localeCompare(b.name);
-          default:
-            return 0;
-        }
-      });
-    }
-  }, [aiToolsData, searchTerm, sortOrder, selectedCategory, freeOnly, firebaseConfigured, firebaseTools]);
+    // 정렬 로직
+    return [...filteredTools].sort((a, b) => {
+      // 타입 가드 함수
+      const isFirebaseTool = (tool: AiTool | FirebaseTool): tool is FirebaseTool => 'id' in tool;
+      
+      switch (sortOrder) {
+        case 'rating_desc':
+          return (isFirebaseTool(b) ? b.averageRating : b.rating) - 
+                 (isFirebaseTool(a) ? a.averageRating : a.rating);
+        case 'rating_asc':
+          return (isFirebaseTool(a) ? a.averageRating : a.rating) - 
+                 (isFirebaseTool(b) ? b.averageRating : b.rating);
+        case 'name_asc':
+          return a.name.localeCompare(b.name);
+        case 'name_desc':
+          return b.name.localeCompare(a.name);
+        case 'created_desc':
+          if (isFirebaseTool(a) && isFirebaseTool(b)) {
+            return b.createdAt.getTime() - a.createdAt.getTime();
+          }
+          return 0;
+        case 'created_asc':
+          if (isFirebaseTool(a) && isFirebaseTool(b)) {
+            return a.createdAt.getTime() - b.createdAt.getTime();
+          }
+          return 0;
+        case 'updated_desc':
+          if (isFirebaseTool(a) && isFirebaseTool(b)) {
+            return b.updatedAt.getTime() - a.updatedAt.getTime();
+          }
+          return 0;
+        case 'updated_asc':
+          if (isFirebaseTool(a) && isFirebaseTool(b)) {
+            return a.updatedAt.getTime() - b.updatedAt.getTime();
+          }
+          return 0;
+        default:
+          return 0;
+      }
+    });
+  }, [
+    aiToolsData, 
+    filters.searchTerm, 
+    sortOrder, 
+    filters.selectedCategory, 
+    filters.freeOnly, 
+    filters.bookmarkedOnly, 
+    bookmarkedToolIds, 
+    firebaseConfigured, 
+    isAuthenticated,
+    isBookmarksLoading
+  ]);
 
   // 페이징 처리된 데이터
   const paginatedTools = useMemo(() => {
@@ -219,12 +282,13 @@ const AppContent: React.FC = () => {
   // 필터나 검색이 변경될 때 첫 페이지로 이동
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCategory, sortOrder, freeOnly]);
+  }, [filters.searchTerm, filters.selectedCategory, sortOrder, filters.freeOnly, filters.bookmarkedOnly]);
 
   /**
    * 에러 발생 시 재시도 함수
    */
   const handleRetry = () => {
+    console.log('🔄 데이터 로딩 재시도');
     window.location.reload();
   };
 
@@ -271,6 +335,46 @@ const AppContent: React.FC = () => {
     }
 
     await deleteTool(toolId, user.uid);
+  };
+
+  /**
+   * 북마크 필터 상태 변경 핸들러
+   */
+  const handleBookmarkedOnlyChange = (value: boolean) => {
+    if (value && !isAuthenticated) {
+      showError('북마크 필터를 사용하려면 로그인이 필요합니다.');
+      return;
+    }
+    
+    // 북마크 필터 활성화 시 북마크가 없는 경우 알림
+    if (value && bookmarkedToolIds.length === 0) {
+      showError('북마크된 도구가 없습니다. 먼저 도구를 북마크에 추가해주세요.');
+    }
+    
+    console.log('🔖 북마크 필터 상태 변경:', value);
+    setFilters(prev => ({ ...prev, bookmarkedOnly: value }));
+  };
+
+  /**
+   * 도구 리뷰 모달 열기 함수
+   */
+  const handleReviewTool = (tool: AiTool | FirebaseTool) => {
+    if (!isAuthenticated) {
+      showError('리뷰를 작성하려면 로그인이 필요합니다.');
+      return;
+    }
+    
+    // 선택된 도구 설정 및 리뷰 모달 열기
+    setSelectedTool(tool);
+    setIsReviewModalOpen(true);
+  };
+
+  /**
+   * 북마크 상태 변경 핸들러 (ToolCard에서 호출)
+   */
+  const handleBookmarkChange = () => {
+    console.log('🔖 북마크 상태 변경 감지, 북마크 목록 새로고침');
+    refreshBookmarks();
   };
 
   return (
@@ -365,14 +469,18 @@ const AppContent: React.FC = () => {
         <>
           <FilterControls
             categories={categories}
-            selectedCategory={selectedCategory}
-            onCategoryChange={setSelectedCategory}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
+            selectedCategory={filters.selectedCategory}
+            onCategoryChange={(category) => setFilters(prev => ({ ...prev, selectedCategory: category }))}
+            searchTerm={filters.searchTerm}
+            onSearchChange={(term) => setFilters(prev => ({ ...prev, searchTerm: term }))}
             sortOrder={sortOrder}
             onSortChange={(value: string) => setSortOrder(value as SortOption)}
-            freeOnly={freeOnly}
-            onFreeOnlyChange={setFreeOnly}
+            freeOnly={filters.freeOnly}
+            onFreeOnlyChange={(value) => setFilters(prev => ({ ...prev, freeOnly: value }))}
+            bookmarkedOnly={filters.bookmarkedOnly}
+            onBookmarkedOnlyChange={handleBookmarkedOnlyChange}
+            isAuthenticated={isAuthenticated}
+            onAddTool={() => setIsAddToolModalOpen(true)}
           />
 
           {/* 사이트 주요 통계 정보 */}
@@ -428,6 +536,7 @@ const AppContent: React.FC = () => {
                       onUpdateTool={handleUpdateTool}
                       onDeleteTool={handleDeleteTool}
                       categories={categories}
+                      onBookmarkChange={handleBookmarkChange}
                     />
                   ))}
                 </div>
@@ -460,6 +569,17 @@ const AppContent: React.FC = () => {
         onError={showError}
       />
 
+      {/* 리뷰 모달 */}
+      {isReviewModalOpen && selectedTool && (
+        <ReviewModal
+          isOpen={isReviewModalOpen}
+          onClose={() => setIsReviewModalOpen(false)}
+          tool={selectedTool}
+          onSuccess={(message) => showSuccess(message)}
+          onError={(message) => showError(message)}
+        />
+      )}
+
       {/* 토스트 메시지 컨테이너 */}
       <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
     </div>
@@ -473,6 +593,7 @@ function App() {
   return (
     <AuthProvider>
       <AppContent />
+      <Analytics />
     </AuthProvider>
   );
 }
