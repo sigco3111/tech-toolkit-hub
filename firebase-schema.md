@@ -1,6 +1,6 @@
 # Firebase Firestore 데이터베이스 스키마
 
-Tech Toolkit Hub의 Firebase Firestore 데이터베이스 구조를 정의합니다.
+AI 테크 허브의 Firebase Firestore 데이터베이스 구조를 정의합니다.
 
 ## 컬렉션 구조
 
