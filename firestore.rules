@@ -81,5 +81,22 @@ service cloud.firestore {
       allow delete: if request.auth != null
         && request.auth.uid == resource.data.userId;
     }
+    
+    // 북마크(bookmarks) 컬렉션 규칙
+    match /bookmarks/{bookmarkId} {
+      // 인증된 사용자만 북마크 목록 읽기 가능 (자신의 북마크만)
+      allow get, list: if request.auth != null && 
+        (resource == null || request.auth.uid == resource.data.userId);
+      
+      // 인증된 사용자만 북마크 생성 가능
+      allow create: if request.auth != null
+        && request.auth.uid == request.resource.data.userId
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.toolId != null;
+      
+      // 북마크 작성자만 삭제 가능
+      allow delete: if request.auth != null
+        && request.auth.uid == resource.data.userId;
+    }
   }
 } 
