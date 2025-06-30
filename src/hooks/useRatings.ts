@@ -44,6 +44,8 @@ export function useRatings(toolId: string): FirestoreQueryResult<FirebaseRating>
       setIsLoading(true);
       setError(null);
 
+      console.log(`🔍 useRatings - 도구 ID "${toolId}"의 평점 조회 시작`);
+
       // 특정 도구의 모든 평점 실시간 구독 (인덱스 없이 작동하도록 단순화)
       const ratingsQuery = query(
         collection(db, 'ratings'),
@@ -55,16 +57,26 @@ export function useRatings(toolId: string): FirestoreQueryResult<FirebaseRating>
         (snapshot) => {
           const ratings: FirebaseRating[] = [];
           
+          console.log(`📊 useRatings - 평점 데이터 수신:`, snapshot.size, '개');
+          
           snapshot.forEach((doc) => {
             const data = doc.data();
-            ratings.push({
+            const rating: FirebaseRating = {
               id: doc.id,
               toolId: data.toolId,
               userId: data.userId,
               rating: data.rating,
               createdAt: data.createdAt?.toDate() || new Date(),
               updatedAt: data.updatedAt?.toDate() || new Date()
+            };
+            
+            console.log(`📝 useRatings - 평점 항목:`, {
+              id: rating.id,
+              userId: rating.userId,
+              rating: rating.rating
             });
+            
+            ratings.push(rating);
           });
           
           // 클라이언트에서 최신순으로 정렬
@@ -72,6 +84,8 @@ export function useRatings(toolId: string): FirestoreQueryResult<FirebaseRating>
           
           setData(ratings);
           setIsLoading(false);
+          
+          console.log(`✅ useRatings - 평점 데이터 로드 완료:`, ratings.length, '개');
         },
         (error) => {
           console.error('❌ 평점 목록 조회 실패:', error);
@@ -231,7 +245,24 @@ export function useRatings(toolId: string): FirestoreQueryResult<FirebaseRating>
    * @returns 사용자의 평점 또는 null
    */
   const getUserRating = (userId: string): FirebaseRating | null => {
-    return data.find(rating => rating.userId === userId) || null;
+    console.log(`🔍 useRatings - 사용자 평점 조회 시작 (userId: ${userId}, toolId: ${toolId})`);
+    console.log(`📊 useRatings - 현재 평점 데이터:`, data.length, '개');
+    
+    if (!userId || !toolId || data.length === 0) {
+      console.log(`ℹ️ useRatings - 평점 조회 불가: userId 없음 또는 데이터 없음`);
+      return null;
+    }
+    
+    // 사용자 ID로 평점 찾기
+    const userRating = data.find(rating => rating.userId === userId);
+    
+    if (userRating) {
+      console.log(`✅ useRatings - 사용자 평점 찾음:`, userRating.rating);
+    } else {
+      console.log(`ℹ️ useRatings - 사용자 평점 없음 (userId: ${userId})`);
+    }
+    
+    return userRating || null;
   };
 
   return {
