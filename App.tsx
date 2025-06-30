@@ -494,22 +494,7 @@ const AppContent: React.FC = () => {
           </div>
         )}
 
-        {/* 새 도구 추가 버튼 (로그인한 사용자만 표시) */}
-        {isAuthenticated && (
-          <div className="mb-8 flex justify-center">
-            <button
-              onClick={() => setIsAddToolModalOpen(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-sky-500 text-white font-bold rounded-lg shadow-md hover:bg-sky-600 transition-all duration-200 transform hover:scale-105"
-              disabled={!firebaseConfigured}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              새 도구 추가하기
-              {!firebaseConfigured && <span className="text-xs">(Firebase 필요)</span>}
-            </button>
-          </div>
-        )}
+        {/* 새 도구 추가 버튼 제거됨 */}
       </header>
 
       {/* 에러 상태 처리 (Firebase 설정된 경우에만) */}
