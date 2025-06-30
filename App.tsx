@@ -21,6 +21,12 @@ import { Analytics } from "@vercel/analytics/react"
  * 에러 표시 컴포넌트
  */
 const ErrorDisplay: React.FC<{ error: string | null; onRetry: () => void }> = ({ error, onRetry }) => {
+  // Firestore 인덱스 오류 확인 및 링크 추출
+  const isIndexError = error?.includes('The query requires an index');
+  const indexLink = isIndexError 
+    ? error?.match(/https:\/\/console\.firebase\.google\.com[^\s)]+/)?.[0] 
+    : null;
+  
   return (
     <div className="bg-red-50 border border-red-200 rounded-xl p-6 my-8 text-center">
       <div className="flex flex-col items-center justify-center gap-4">
@@ -30,7 +36,34 @@ const ErrorDisplay: React.FC<{ error: string | null; onRetry: () => void }> = ({
           </svg>
         </div>
         <h3 className="text-lg font-medium text-red-800">데이터 로딩 오류</h3>
-        <p className="text-sm text-red-700 mb-4">{error}</p>
+        
+        {isIndexError ? (
+          <div className="text-sm text-red-700 mb-4 max-w-2xl">
+            <p className="mb-2">Firestore 인덱스가 필요한 쿼리입니다. 다음 단계를 따라 해결해주세요:</p>
+            <ol className="list-decimal text-left pl-5 mb-4">
+              <li className="mb-1">아래 링크를 클릭하여 Firebase 콘솔로 이동합니다.</li>
+              <li className="mb-1">콘솔에서 '인덱스 생성' 버튼을 클릭합니다.</li>
+              <li className="mb-1">인덱스 생성이 완료될 때까지 기다립니다 (약 1-5분 소요).</li>
+              <li>완료 후 아래 '다시 시도' 버튼을 클릭합니다.</li>
+            </ol>
+            {indexLink && (
+              <a 
+                href={indexLink} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors duration-200 mb-4"
+              >
+                Firebase 콘솔에서 인덱스 생성
+              </a>
+            )}
+            <p className="text-xs text-red-600 mt-2">
+              또는 카테고리를 '전체'로 변경하여 계속 사용할 수 있습니다.
+            </p>
+          </div>
+        ) : (
+          <p className="text-sm text-red-700 mb-4">{error}</p>
+        )}
+        
         <button
           onClick={onRetry}
           className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors duration-200 flex items-center gap-2"
@@ -377,6 +410,26 @@ const AppContent: React.FC = () => {
     refreshBookmarks();
   };
 
+  /**
+   * 카테고리 변경 핸들러
+   */
+  const handleCategoryChange = (category: string) => {
+    console.log('📂 카테고리 변경:', category);
+    
+    try {
+      // 카테고리 필터 변경
+      setFilters(prev => ({ ...prev, selectedCategory: category }));
+      
+      // 인덱스 오류가 발생할 경우를 대비한 안내 메시지
+      if (category !== '전체' && firebaseConfigured) {
+        showSuccess(`'${category}' 카테고리를 적용합니다. 데이터를 불러오는 중...`);
+      }
+    } catch (error) {
+      console.error('❌ 카테고리 필터 변경 중 오류:', error);
+      showError('카테고리 필터 적용 중 오류가 발생했습니다.');
+    }
+  };
+
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8">
       {/* Dev Canvas 카드 - 좌측 상단 고정 */}
@@ -470,7 +523,7 @@ const AppContent: React.FC = () => {
           <FilterControls
             categories={categories}
             selectedCategory={filters.selectedCategory}
-            onCategoryChange={(category) => setFilters(prev => ({ ...prev, selectedCategory: category }))}
+            onCategoryChange={handleCategoryChange}
             searchTerm={filters.searchTerm}
             onSearchChange={(term) => setFilters(prev => ({ ...prev, searchTerm: term }))}
             sortOrder={sortOrder}
