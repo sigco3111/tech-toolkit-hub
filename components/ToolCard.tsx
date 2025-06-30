@@ -320,7 +320,20 @@ const ToolCard: React.FC<ToolCardProps> = ({ tool, onUpdateTool, onDeleteTool, c
                 {recentComments.map(comment => (
                   <div key={comment.id} className="bg-slate-50 p-2 rounded-md">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs font-medium text-slate-700">{comment.userName}</span>
+                      <div className="flex items-center gap-1.5">
+                        {comment.userPhotoURL ? (
+                          <img 
+                            src={comment.userPhotoURL} 
+                            alt={`${comment.userName} 프로필`} 
+                            className="w-4 h-4 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-4 h-4 rounded-full bg-gray-300 flex items-center justify-center text-[8px] text-gray-600">
+                            {comment.userName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <span className="text-xs font-medium text-slate-700">{comment.userName}</span>
+                      </div>
                       <span className="text-xs text-slate-400">{comment.createdAt.toLocaleDateString('ko-KR')}</span>
                     </div>
                     <p className="text-xs text-slate-600 line-clamp-2">{comment.content}</p>
