@@ -148,11 +148,21 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
 
   // 현재 사용자의 평점
   const userRating = user && canUseFirebaseFeatures ? getUserRating(user.uid) : null;
+  
+  // 디버깅: 사용자 평점 정보 출력
+  useEffect(() => {
+    if (isOpen && user && canUseFirebaseFeatures) {
+      console.log('🔍 ReviewModal - 사용자 정보:', user.uid);
+      console.log('🔍 ReviewModal - 도구 ID:', toolId);
+      console.log('🔍 ReviewModal - 사용자 평점:', userRating);
+    }
+  }, [isOpen, user, canUseFirebaseFeatures, toolId, userRating]);
 
   /**
    * 평점 변경 핸들러
    */
-  const handleRatingChange = () => {
+  const handleRatingChange = (rating: number) => {
+    console.log('⭐ ReviewModal - 평점 변경:', rating);
     // 평점 변경 시 필요한 로직이 있다면 여기에 추가
   };
 
@@ -172,15 +182,28 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
       throw new Error(errorMsg);
     }
 
+    console.log('⭐ ReviewModal - 평점 제출 시작:', rating);
+    console.log('⭐ ReviewModal - 현재 사용자 평점:', userRating);
+
     try {
       if (userRating) {
+        console.log('⭐ ReviewModal - 기존 평점 수정:', userRating.id, rating);
         await updateRating(userRating.id, rating);
         onSuccess?.('평점이 성공적으로 수정되었습니다.');
       } else {
+        console.log('⭐ ReviewModal - 새 평점 추가:', user.uid, rating);
         await addRating(user.uid, rating);
         onSuccess?.('평점이 성공적으로 등록되었습니다.');
       }
+      
+      // 평점 제출 후 약간의 지연을 두고 상태 확인 (Firebase 데이터 갱신 시간 고려)
+      setTimeout(() => {
+        console.log('⭐ ReviewModal - 평점 제출 후 상태 확인');
+        const updatedUserRating = getUserRating(user.uid);
+        console.log('⭐ ReviewModal - 업데이트된 사용자 평점:', updatedUserRating);
+      }, 1000);
     } catch (error: any) {
+      console.error('❌ ReviewModal - 평점 제출 실패:', error);
       const errorMsg = error.message || '평점 처리 중 오류가 발생했습니다.';
       onError?.(errorMsg);
       throw new Error(errorMsg);
@@ -197,10 +220,20 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
       throw new Error(errorMsg);
     }
 
+    console.log('⭐ ReviewModal - 평점 삭제 시작:', userRating.id);
+
     try {
       await deleteRating(userRating.id);
       onSuccess?.('평점이 성공적으로 삭제되었습니다.');
+      
+      // 평점 삭제 후 약간의 지연을 두고 상태 확인 (Firebase 데이터 갱신 시간 고려)
+      setTimeout(() => {
+        console.log('⭐ ReviewModal - 평점 삭제 후 상태 확인');
+        const updatedUserRating = getUserRating(user?.uid || '');
+        console.log('⭐ ReviewModal - 업데이트된 사용자 평점:', updatedUserRating);
+      }, 1000);
     } catch (error: any) {
+      console.error('❌ ReviewModal - 평점 삭제 실패:', error);
       const errorMsg = error.message || '평점 삭제 중 오류가 발생했습니다.';
       onError?.(errorMsg);
       throw new Error(errorMsg);
@@ -580,6 +613,14 @@ const ReviewModal: React.FC<ReviewModalProps> = ({ tool, isOpen, onClose, onSucc
             {isAuthenticated && canUseFirebaseFeatures && (
               <div className="bg-slate-50 rounded-lg p-4">
                 <h3 className="font-semibold text-slate-900 mb-3">별점 평가</h3>
+                {/* 디버깅 정보 표시 */}
+                <div className="text-xs text-slate-500 mb-2">
+                  {userRating ? (
+                    <p>현재 평점: {userRating.rating.toFixed(1)}점</p>
+                  ) : (
+                    <p>아직 평점을 등록하지 않았습니다.</p>
+                  )}
+                </div>
                 <RatingSystem
                   currentRating={userRating?.rating || 0}
                   onRatingChange={handleRatingChange}

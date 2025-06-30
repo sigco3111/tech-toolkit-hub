@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface RatingSystemProps {
   currentRating?: number; // 현재 사용자의 평점 (수정 모드)
@@ -21,9 +21,18 @@ const RatingSystem: React.FC<RatingSystemProps> = ({
   disabled = false,
   showDeleteButton = false
 }) => {
+  // 초기 currentRating 값 디버깅
+  console.log('⭐ RatingSystem - 초기 currentRating:', currentRating);
+
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [selectedRating, setSelectedRating] = useState<number>(currentRating);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // currentRating이 변경될 때 selectedRating 업데이트
+  useEffect(() => {
+    console.log('⭐ RatingSystem - currentRating 변경됨:', currentRating);
+    setSelectedRating(currentRating);
+  }, [currentRating]);
 
   /**
    * 별 클릭 핸들러
@@ -32,6 +41,7 @@ const RatingSystem: React.FC<RatingSystemProps> = ({
   const handleStarClick = (rating: number) => {
     if (disabled) return;
     
+    console.log('⭐ RatingSystem - 별 클릭:', rating);
     setSelectedRating(rating);
     onRatingChange(rating);
   };
@@ -42,6 +52,7 @@ const RatingSystem: React.FC<RatingSystemProps> = ({
   const handleSubmit = async () => {
     if (disabled || selectedRating === 0) return;
     
+    console.log('⭐ RatingSystem - 평점 제출:', selectedRating);
     setIsSubmitting(true);
     try {
       await onRatingSubmit(selectedRating);
@@ -58,6 +69,7 @@ const RatingSystem: React.FC<RatingSystemProps> = ({
   const handleDelete = async () => {
     if (disabled || !onRatingDelete) return;
     
+    console.log('⭐ RatingSystem - 평점 삭제');
     setIsSubmitting(true);
     try {
       await onRatingDelete();
