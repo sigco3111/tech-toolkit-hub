@@ -79,6 +79,26 @@ const FilterControls: React.FC<FilterControlsProps> = ({
     }
   };
   
+  /**
+   * 카테고리 버튼 클릭 핸들러
+   */
+  const handleCategoryClick = (category: string) => {
+    try {
+      console.log('📂 카테고리 클릭:', category);
+      
+      // 부모 컴포넌트에 카테고리 변경 전달
+      onCategoryChange(category);
+      
+      // 모바일에서 카테고리 선택 후 자동으로 접기
+      if (isMobile) {
+        setIsCategoryExpanded(false);
+      }
+    } catch (error) {
+      console.error('❌ 카테고리 클릭 처리 중 오류:', error);
+      // 에러 처리는 부모 컴포넌트에서 담당
+    }
+  };
+  
   return (
     <div className="bg-white p-3 md:p-4 rounded-xl shadow-md mb-6 md:mb-8 sticky top-2 md:top-4 z-10">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -198,13 +218,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
         {categories.map(category => (
           <button
             key={category}
-            onClick={() => {
-              onCategoryChange(category);
-              // 모바일에서 카테고리 선택 후 자동으로 접기
-              if (isMobile) {
-                setIsCategoryExpanded(false);
-              }
-            }}
+            onClick={() => handleCategoryClick(category)}
             className={`px-4 py-2 text-sm font-medium rounded-full shadow-sm hover:bg-slate-100 transition-colors duration-200 border border-slate-200 ${
               selectedCategory === category
                 ? 'bg-sky-500 text-white font-bold shadow-md'
