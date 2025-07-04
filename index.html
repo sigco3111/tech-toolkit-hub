@@ -17,6 +17,31 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon-192x192.svg">
     <link rel="manifest" href="/site.webmanifest">
     
+    <!-- SPA 리다이렉트 처리 스크립트 -->
+    <script>
+      // URL에서 path 파라미터가 있는지 확인합니다
+      (function() {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, null, redirect);
+        }
+        
+        // 쿼리 파라미터에서 path 정보 확인
+        var l = window.location;
+        var query = l.search;
+        var path = query.match(/path=([^&]*)/);
+        var queryParams = query.match(/query=([^&]*)/);
+        
+        if (path) {
+          var newPath = '/' + decodeURIComponent(path[1]);
+          var newQuery = queryParams ? '?' + decodeURIComponent(queryParams[1]) : '';
+          var newUrl = newPath + newQuery + l.hash;
+          history.replaceState(null, null, newUrl);
+        }
+      })();
+    </script>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

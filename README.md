@@ -1,6 +1,6 @@
 # AI 테크 허브
 
-[![React](https://img.shields.io/badge/React-19-blue?logo=react)](https://react.dev/) [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/) [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-blue?logo=tailwindcss)](https://tailwindcss.com/) [![Firebase](https://img.shields.io/badge/Firebase-11.x-orange?logo=firebase)](https://firebase.google.com/) [![Gemini API](https://img.shields.io/badge/Google_Gemini-API-orange?logo=google-gemini)](https://ai.google.dev/)
+[![React](https://img.shields.io/badge/React-19-blue?logo=react)](https://react.dev/) [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/) [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-blue?logo=tailwindcss)](https://tailwindcss.com/) [![Firebase](https://img.shields.io/badge/Firebase-11.x-orange?logo=firebase)](https://firebase.google.com/)
 
 **AI 테크 허브**는 개발자와 AI 사용자를 위한 필수 도구 모음 사이트입니다. AI 챗봇, 개발 도구, 클라우드 플랫폼 등 다양한 기술 스택의 도구들을 한곳에서 탐색, 필터링, 검색하고 AI 추천까지 받을 수 있는 모던 웹 애플리케이션입니다.
 
@@ -17,6 +17,7 @@
 - **💾 실시간 데이터**: Firebase Firestore를 통한 실시간 데이터 동기화
 - **⭐ 사용자 평점**: 도구별 사용자 평점 시스템 (0.5 단위)
 - **💬 댓글 시스템**: 도구별 댓글 및 답글 기능
+- **📤 데이터 내보내기/가져오기**: 관리자는 도구 데이터를 JSON 형식으로 내보내거나 가져올 수 있습니다.
 - **반응형 디자인**: 데스크톱, 태블릿, 모바일 등 모든 기기에서 최적화된 UI/UX를 제공합니다.
 - **제로 빌드**: `importmap`을 사용하여 별도의 빌드 과정 없이 브라우저에서 직접 최신 JavaScript/TypeScript 모듈을 실행합니다.
 
@@ -77,6 +78,9 @@ FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
 FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
 FIREBASE_APP_ID=your_app_id
 
+# 관리자 계정 설정
+VITE_ADMIN_ID=your_admin_id
+VITE_ADMIN_PW=your_admin_password
 ```
 
 **참고**: `.env` 파일은 `.gitignore`에 포함되어 있으므로 Git에 커밋되지 않습니다. 보안을 위해 API 키를 공개하지 마세요.
@@ -97,84 +101,67 @@ npm install
 2. **브라우저에서 확인**:
    웹 서버가 제공하는 주소(예: `http://localhost:5173`)를 웹 브라우저에서 열어 애플리케이션을 확인합니다.
 
-## 🗂️ 도구 관리 스크립트
+## 👨‍💼 어드민 사이트
 
-Firebase에 저장된 도구 데이터를 name으로 검색하여 조회, 수정, 삭제할 수 있는 관리 스크립트를 제공합니다.
+AI 테크 허브는 관리자를 위한 별도의 어드민 페이지를 제공합니다. 이 페이지에서는 도구 및 카테고리를 관리할 수 있습니다.
 
-### 사용법
+### 어드민 접속 방법
 
-#### 1. 대화형 모드 (권장)
-
-인수 없이 실행하면 대화형 모드로 시작됩니다:
-
-```bash
-npm run manage-tool
-```
-
-대화형 모드에서는 다음과 같은 기능을 제공합니다:
-- 도구 이름 검색 (정확한 매치 또는 부분 매치)
-- 여러 도구가 검색될 경우 선택 메뉴 제공
-- 도구 정보 조회
-- 도구 정보 수정 (이름, 카테고리, URL, 설명, 메모, 플랜)
-- 도구 삭제 (관련 평점/댓글 포함 또는 제외 선택 가능)
-
-#### 2. 명령행 모드
-
-특정 명령을 직접 실행할 수 있습니다:
-
-```bash
-# 도구 검색
-npm run manage-tool search "도구이름"
-
-# 도구 삭제 (도구만)
-npm run manage-tool delete "도구이름"
-
-# 도구 삭제 (관련 평점/댓글 포함)
-npm run manage-tool delete-all "도구이름"
-```
+- **URL**: `/admin` 또는 `/admin/login` 경로로 접속
+- **인증**: 환경 변수로 설정된 관리자 계정으로 로그인
+  - `.env` 파일에 설정된 `VITE_ADMIN_ID`와 `VITE_ADMIN_PW` 값을 사용
+  - 보안을 위해 이 값들은 공개 저장소에 커밋하지 마세요
 
 ### 주요 기능
 
-- **정확한 검색**: 입력한 이름과 정확히 일치하는 도구를 우선 검색
-- **유사 검색**: 정확한 매치가 없을 경우 부분 매치 검색 수행
-- **안전한 삭제**: 삭제 전 확인 메시지로 실수 방지
-- **관련 데이터 관리**: 도구 삭제 시 평점과 댓글도 함께 삭제하는 옵션 제공
-- **상세 정보**: 검색된 도구의 ID, 이름, 카테고리, URL, 설명, 작성자, 평점 등 표시
+1. **도구 관리**:
+   - 도구 목록 조회
+   - 도구 추가/수정/삭제
+   - 도구 데이터 일괄 내보내기/가져오기 (JSON 형식)
 
-### 환경 변수 확인
+2. **카테고리 관리**:
+   - 카테고리 목록 조회
+   - 카테고리 추가/수정/삭제
+   - 카테고리별 도구 수 확인
 
-스크립트 실행 전 Firebase 환경 변수가 설정되어 있는지 확인하세요:
+### Vercel 배포 시 주의사항
 
-```bash
-# 필수 환경 변수
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_API_KEY=your_firebase_api_key  
-VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+Vercel에 배포할 경우 SPA(Single Page Application) 라우팅 문제로 어드민 페이지에 직접 접근 시 404 에러가 발생할 수 있습니다. 이를 해결하기 위해 프로젝트 루트에 `vercel.json` 파일을 추가하여 모든 경로를 `index.html`로 리다이렉트하는 설정이 필요합니다:
+
+```json
+{
+  "rewrites": [
+    { "source": "/admin/:path*", "destination": "/index.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "routes": [
+    {
+      "src": "/[^.]+",
+      "dest": "/",
+      "status": 200
+    }
+  ]
+}
 ```
 
-### 사용 예시
+또한 `public/404.html` 파일과 `index.html`에 리다이렉트 처리 스크립트를 추가하여 클라이언트 사이드 라우팅이 올바르게 작동하도록 해야 합니다.
 
-1. **도구 검색 및 조회**:
-   ```
-   🔍 도구 검색 중: "ChatGPT"
-   ✅ 1개의 도구를 찾았습니다 (정확한 매치):
-   1. ID: abc123def456
-      이름: ChatGPT
-      카테고리: AI 챗봇
-      URL: https://chat.openai.com
-      설명: OpenAI에서 개발한 대화형 AI 모델...
-      작성자: user123
-      평점: 4.5 (25명)
-   ```
+## 📤 데이터 내보내기/가져오기
 
-2. **도구 정보 수정**:
-   - 대화형 모드에서 도구 선택 후 "2. 도구 정보 수정" 선택
-   - 수정하고 싶은 필드만 입력 (나머지는 엔터로 건너뛰기)
-   - 확인 후 수정 실행
+관리자 페이지에서는 도구 데이터를 JSON 형식으로 내보내거나 가져올 수 있습니다.
 
-3. **도구 삭제**:
-   - "3. 도구 삭제 (관련 데이터 포함)": 평점, 댓글까지 모두 삭제
-   - "4. 도구 삭제 (도구만)": 도구만 삭제하고 평점/댓글은 유지
+### 내보내기 기능
+
+- 관리자 페이지의 도구 관리 화면에서 "JSON 내보내기" 버튼을 클릭하면 현재 등록된 모든 도구 데이터를 JSON 파일로 다운로드할 수 있습니다.
+- 파일명은 `tech-toolkit-YYYY-MM-DD.json` 형식으로 저장됩니다.
+
+### 가져오기 기능
+
+- 관리자 페이지의 도구 관리 화면에서 "JSON 가져오기" 버튼을 클릭하여 JSON 파일을 선택합니다.
+- 가져오기 모드를 선택할 수 있습니다:
+  - **추가 모드**: 기존 데이터를 유지하면서 새 데이터를 추가합니다.
+  - **교체 모드**: 기존 데이터를 모두 삭제하고 새 데이터로 교체합니다.
+- 가져오기 전에 데이터 유효성을 검사하여 올바른 형식의 데이터만 가져옵니다.
 
 ## 📁 프로젝트 구조
 
@@ -182,20 +169,51 @@ VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
 .
 ├── src/
 │   ├── components/             # 리액트 컴포넌트 디렉토리
-│   │   ├── CategoryChart.tsx   # 카테고리별 평점 차트
-│   │   ├── FilterControls.tsx  # 필터링 및 정렬 컨트롤
-│   │   ├── RecommendationModal.tsx # AI 추천 기능 모달
-│   │   ├── StarRating.tsx      # 별점 표시 컴포넌트
-│   │   └── ToolCard.tsx        # 개별 도구 정보 카드
-│   ├── lib/
-│   │   ├── firebase.ts         # Firebase 초기화 및 설정
-│   │   └── gemini.ts          # Google Gemini API 호출 함수
-│   └── hooks/                  # React 커스텀 훅
-├── constants.ts                # 애플리케이션에서 사용하는 상수 데이터
+│   │   ├── admin/              # 관리자 관련 컴포넌트
+│   │   │   ├── AdminLayout.tsx # 관리자 레이아웃
+│   │   │   ├── AdminLogin.tsx  # 관리자 로그인
+│   │   │   ├── CategoryManager.tsx # 카테고리 관리
+│   │   │   └── ToolManager.tsx # 도구 관리
+│   │   ├── LoadingSkeleton.tsx # 로딩 상태 컴포넌트
+│   │   ├── RatingSystem.tsx    # 평점 시스템
+│   │   └── Toast.tsx           # 토스트 메시지
+│   ├── contexts/               # 컨텍스트 API
+│   │   ├── AdminContext.tsx    # 관리자 상태 관리
+│   │   └── AuthContext.tsx     # 인증 상태 관리
+│   ├── hooks/                  # React 커스텀 훅
+│   │   ├── useAdminAuth.ts     # 관리자 인증 훅
+│   │   ├── useAuth.ts          # 사용자 인증 훅
+│   │   ├── useBookmarks.ts     # 북마크 관리 훅
+│   │   ├── useComments.ts      # 댓글 관리 훅
+│   │   ├── useRatings.ts       # 평점 관리 훅
+│   │   ├── useToast.ts         # 토스트 메시지 훅
+│   │   └── useTools.ts         # 도구 데이터 관리 훅
+│   ├── lib/                    # 라이브러리 및 유틸리티
+│   │   └── firebase.ts         # Firebase 초기화 및 설정
+│   └── utils/                  # 유틸리티 함수
+│       ├── exportImport.ts     # 데이터 내보내기/가져오기 유틸리티
+│       └── performance.ts      # 성능 최적화 유틸리티
+├── components/                 # 루트 레벨 컴포넌트
+│   ├── AddToolModal.tsx        # 도구 추가 모달
+│   ├── EditToolModal.tsx       # 도구 편집 모달
+│   ├── FilterControls.tsx      # 필터링 컨트롤
+│   ├── Pagination.tsx          # 페이지네이션
+│   ├── RecommendationModal.tsx # AI 추천 모달
+│   ├── ReviewModal.tsx         # 리뷰 모달
+│   ├── SiteStatistics.tsx      # 사이트 통계
+│   ├── StarRating.tsx          # 별점 컴포넌트
+│   ├── ToolCard.tsx            # 도구 카드
+│   └── UserAuth.tsx            # 사용자 인증 컴포넌트
+├── scripts/                    # 스크립트
+│   ├── init-collections.ts     # 컬렉션 초기화 스크립트
+│   └── migrate-data.ts         # 데이터 마이그레이션 스크립트
+├── public/                     # 정적 파일 디렉토리
+│   └── 404.html                # SPA 라우팅을 위한 404 리다이렉트 페이지
 ├── types.ts                    # TypeScript 타입 정의
 ├── App.tsx                     # 메인 애플리케이션 컴포넌트
 ├── index.html                  # HTML 진입점 및 importmap 설정
 ├── index.tsx                   # React 애플리케이션 마운트 스크립트
+├── vercel.json                 # Vercel 배포 설정
 ├── metadata.json               # 앱 메타데이터
 └── README.md                   # 프로젝트 설명 파일
 ```
@@ -205,5 +223,6 @@ VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
 - Firebase 보안 규칙을 설정하여 인증된 사용자만 데이터를 수정할 수 있도록 합니다.
 - API 키는 환경 변수로 관리하며 공개 저장소에 업로드하지 않습니다.
 - 사용자 입력값에 대한 검증 및 서버 측 유효성 검사를 구현합니다.
+- 관리자 기능(데이터 내보내기/가져오기)은 관리자 권한이 있는 사용자만 접근할 수 있습니다.
 
 ---

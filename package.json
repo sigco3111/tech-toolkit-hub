@@ -8,8 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "migrate": "tsx scripts/migrate-data.ts",
-    "init-collections": "tsx scripts/init-collections.ts",
-    "manage-tool": "tsx scripts/manage-tool.ts"
+    "init-collections": "tsx scripts/init-collections.ts"
   },
   "dependencies": {
     "@google/genai": "^1.7.0",
