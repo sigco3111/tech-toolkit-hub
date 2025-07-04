@@ -14,9 +14,9 @@ import { useTools } from './src/hooks/useTools';
 import { useToast } from './src/hooks/useToast';
 import { useBookmarks } from './src/hooks/useBookmarks';
 import { isFirebaseConfigured } from './src/lib/firebase';
-import { AI_TOOLS_DATA, CATEGORIES } from './constants';
 import { Analytics } from "@vercel/analytics/react"
-import { exportToolsToJson, downloadJsonFile } from './src/utils/exportImport';
+// 내보내기 관련 import 제거
+// import { exportToolsToJson, downloadJsonFile } from './src/utils/exportImport';
 
 /**
  * 에러 표시 컴포넌트
@@ -120,8 +120,8 @@ const AppContent: React.FC = () => {
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedTool, setSelectedTool] = useState<AiTool | FirebaseTool | null>(null);
   
-  // 내보내기 상태 관리
-  const [isExporting, setIsExporting] = useState(false);
+  // 내보내기 상태 관리 제거
+  // const [isExporting, setIsExporting] = useState(false);
   
   // 인증 상태가 변경될 때 필터 상태 업데이트
   useEffect(() => {
@@ -152,41 +152,19 @@ const AppContent: React.FC = () => {
     console.log('🔖 App - 북마크 에러:', bookmarksError);
   }, [bookmarkedToolIds, isBookmarksLoading, bookmarksError]);
   
-  // Firebase에서 실시간 도구 데이터 가져오기 (Firebase 설정된 경우에만)
-  const firebaseData = useTools(filters.selectedCategory, sortOrder);
+  // Firebase에서 실시간 도구 데이터 가져오기
+  const { data: firebaseTools, isLoading, error, categories, addTool, updateTool, deleteTool } = useTools(filters.selectedCategory, sortOrder);
   
-  // 데이터 소스 결정 (Firebase 설정 여부에 따라)
-  const { data: firebaseTools, isLoading, error, categories, addTool, updateTool, deleteTool } = firebaseConfigured 
-    ? firebaseData 
-    : { 
-        data: [], 
-        isLoading: false, 
-        error: null, 
-        categories: CATEGORIES,
-        addTool: async () => { throw new Error('Firebase가 설정되지 않았습니다.'); },
-        updateTool: async () => { throw new Error('Firebase가 설정되지 않았습니다.'); },
-        deleteTool: async () => { throw new Error('Firebase가 설정되지 않았습니다.'); }
-      };
+  // 디버깅용 로그
+  console.log('🔍 Firebase 데이터 조회 결과:', {
+    firebaseConfigured,
+    firebaseToolsLength: firebaseTools.length,
+    isLoading,
+    error
+  });
 
-  // 데이터 소스 결정: Firebase 데이터 또는 정적 데이터
-  const aiToolsData: (AiTool | FirebaseTool)[] = useMemo(() => {
-    // 디버깅용 로그
-    console.log('🔍 데이터 소스 결정:', {
-      firebaseConfigured,
-      firebaseToolsLength: firebaseTools.length,
-      isLoading,
-      error
-    });
-    
-    if (firebaseConfigured && firebaseTools.length > 0) {
-      console.log('✅ Firebase 데이터 사용:', firebaseTools.length + '개');
-      // Firebase 도구를 변환하지 않고 그대로 사용 (편집 기능을 위해)
-      return firebaseTools;
-    }
-    // Firebase가 설정되지 않았거나 데이터가 없는 경우 정적 데이터 사용
-    console.log('📄 정적 데이터 사용:', AI_TOOLS_DATA.length + '개');
-    return AI_TOOLS_DATA;
-  }, [firebaseConfigured, firebaseTools, isLoading, error]);
+  // 데이터 소스 (Firebase 데이터만 사용)
+  const aiToolsData: FirebaseTool[] = firebaseTools;
 
   // 기존 필터링 및 정렬 로직에 북마크 필터링 추가
   const filteredAndSortedTools = useMemo(() => {
@@ -235,14 +213,9 @@ const AppContent: React.FC = () => {
         return []; // 북마크가 없으면 빈 배열 반환
       }
       
-      // 도구 ID 추출 함수
-      const getToolId = (tool: AiTool | FirebaseTool): string => {
-        return 'id' in tool ? tool.id : tool.name;
-      };
-      
       // 북마크 필터링 적용
       filteredTools = filteredTools.filter(tool => {
-        const toolId = getToolId(tool);
+        const toolId = tool.id;
         const isBookmarked = bookmarkedToolIds.includes(toolId);
         
         console.log(`🔖 도구 "${tool.name}" (ID: ${toolId}) 북마크 여부:`, isBookmarked);
@@ -255,54 +228,37 @@ const AppContent: React.FC = () => {
 
     // 정렬 로직
     return [...filteredTools].sort((a, b) => {
-      // 타입 가드 함수
-      const isFirebaseTool = (tool: AiTool | FirebaseTool): tool is FirebaseTool => 'id' in tool;
-      
       switch (sortOrder) {
         case 'rating_desc':
-          return (isFirebaseTool(b) ? b.averageRating : b.rating) - 
-                 (isFirebaseTool(a) ? a.averageRating : a.rating);
+          return b.averageRating - a.averageRating;
         case 'rating_asc':
-          return (isFirebaseTool(a) ? a.averageRating : a.rating) - 
-                 (isFirebaseTool(b) ? b.averageRating : b.rating);
+          return a.averageRating - b.averageRating;
         case 'name_asc':
           return a.name.localeCompare(b.name);
         case 'name_desc':
           return b.name.localeCompare(a.name);
         case 'created_desc':
-          if (isFirebaseTool(a) && isFirebaseTool(b)) {
-            return b.createdAt.getTime() - a.createdAt.getTime();
-          }
-          return 0;
+          return b.createdAt.getTime() - a.createdAt.getTime();
         case 'created_asc':
-          if (isFirebaseTool(a) && isFirebaseTool(b)) {
-            return a.createdAt.getTime() - b.createdAt.getTime();
-          }
-          return 0;
+          return a.createdAt.getTime() - b.createdAt.getTime();
         case 'updated_desc':
-          if (isFirebaseTool(a) && isFirebaseTool(b)) {
-            return b.updatedAt.getTime() - a.updatedAt.getTime();
-          }
-          return 0;
+          return b.updatedAt.getTime() - a.updatedAt.getTime();
         case 'updated_asc':
-          if (isFirebaseTool(a) && isFirebaseTool(b)) {
-            return a.updatedAt.getTime() - b.updatedAt.getTime();
-          }
-          return 0;
+          return a.updatedAt.getTime() - b.updatedAt.getTime();
         default:
-          return 0;
+          return b.updatedAt.getTime() - a.updatedAt.getTime();
       }
     });
   }, [
-    aiToolsData, 
-    filters.searchTerm, 
-    sortOrder, 
-    filters.selectedCategory, 
-    filters.freeOnly, 
-    filters.bookmarkedOnly, 
-    bookmarkedToolIds, 
-    firebaseConfigured, 
+    filters.selectedCategory,
+    filters.searchTerm,
+    filters.freeOnly,
+    filters.bookmarkedOnly,
+    sortOrder,
+    aiToolsData,
+    bookmarkedToolIds,
     isAuthenticated,
+    firebaseConfigured,
     isBookmarksLoading
   ]);
 
@@ -434,23 +390,6 @@ const AppContent: React.FC = () => {
     }
   };
 
-  /**
-   * 도구 데이터 내보내기 핸들러
-   */
-  const handleExportTools = async () => {
-    try {
-      setIsExporting(true);
-      const jsonData = await exportToolsToJson();
-      downloadJsonFile(jsonData, `tech-toolkit-${new Date().toISOString().slice(0, 10)}.json`);
-      showSuccess('도구 데이터가 성공적으로 내보내졌습니다.');
-    } catch (error) {
-      console.error('데이터 내보내기 오류:', error);
-      showError(`데이터 내보내기 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8">
       {/* Dev Canvas 카드 - 좌측 상단 고정 */}
@@ -549,35 +488,11 @@ const AppContent: React.FC = () => {
                       isAuthenticated={isAuthenticated}
                       onAddTool={() => setIsAddToolModalOpen(true)}
                     >
-                      <div className="flex gap-3">
-                        <button
-                          onClick={handleExportTools}
-                          disabled={isExporting}
-                          className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center gap-1 text-sm"
-                        >
-                          {isExporting ? (
-                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                          ) : (
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
-                            </svg>
-                          )}
-                          내보내기
-                        </button>
-                        <button
-                          onClick={() => setIsAddToolModalOpen(true)}
-                          className="px-3 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-md hover:from-indigo-700 hover:to-purple-700 transition-colors duration-200 flex items-center gap-1 text-sm"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
-                          도구 추가
-                        </button>
-                      </div>
+                      {/* 내보내기 버튼 제거 - 어드민 페이지에서만 사용 가능하도록 수정 */}
                     </FilterControls>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    총 {filteredAndSortedTools.length}개의 도구
                   </div>
                 </div>
               </div>

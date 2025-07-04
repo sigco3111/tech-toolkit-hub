@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../src/hooks/useAuth';
 import { ToolInput } from '../types';
-import { CATEGORIES } from '../constants';
 
 interface AddToolModalProps {
   isOpen: boolean;
@@ -262,7 +261,7 @@ const AddToolModal: React.FC<AddToolModalProps> = ({
                         // 전달받은 카테고리가 있으면 사용, 없으면 기본 카테고리 사용
                         const availableCategories = (categories && categories.length > 0) 
                           ? categories 
-                          : CATEGORIES;
+                          : ['AI', '개발도구', '디자인', '데이터베이스', '프레임워크', '프로젝트', '협업', '통합', '활용', '컴퓨터', '오피스', '기타'];
                         
                         return availableCategories
                           .filter(cat => cat !== '전체')
