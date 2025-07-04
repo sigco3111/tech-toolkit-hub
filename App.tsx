@@ -16,6 +16,7 @@ import { useBookmarks } from './src/hooks/useBookmarks';
 import { isFirebaseConfigured } from './src/lib/firebase';
 import { AI_TOOLS_DATA, CATEGORIES } from './constants';
 import { Analytics } from "@vercel/analytics/react"
+import { exportToolsToJson, downloadJsonFile } from './src/utils/exportImport';
 
 /**
  * 에러 표시 컴포넌트
@@ -118,6 +119,9 @@ const AppContent: React.FC = () => {
   // 리뷰 모달 상태 관리
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedTool, setSelectedTool] = useState<AiTool | FirebaseTool | null>(null);
+  
+  // 내보내기 상태 관리
+  const [isExporting, setIsExporting] = useState(false);
   
   // 인증 상태가 변경될 때 필터 상태 업데이트
   useEffect(() => {
@@ -430,6 +434,23 @@ const AppContent: React.FC = () => {
     }
   };
 
+  /**
+   * 도구 데이터 내보내기 핸들러
+   */
+  const handleExportTools = async () => {
+    try {
+      setIsExporting(true);
+      const jsonData = await exportToolsToJson();
+      downloadJsonFile(jsonData, `tech-toolkit-${new Date().toISOString().slice(0, 10)}.json`);
+      showSuccess('도구 데이터가 성공적으로 내보내졌습니다.');
+    } catch (error) {
+      console.error('데이터 내보내기 오류:', error);
+      showError(`데이터 내보내기 중 오류가 발생했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8">
       {/* Dev Canvas 카드 - 좌측 상단 고정 */}
@@ -505,21 +526,63 @@ const AppContent: React.FC = () => {
       {/* 로딩 및 정상 상태 처리 */}
       {(!firebaseConfigured || !error) && (
         <>
-          <FilterControls
-            categories={categories}
-            selectedCategory={filters.selectedCategory}
-            onCategoryChange={handleCategoryChange}
-            searchTerm={filters.searchTerm}
-            onSearchChange={(term) => setFilters(prev => ({ ...prev, searchTerm: term }))}
-            sortOrder={sortOrder}
-            onSortChange={(value: string) => setSortOrder(value as SortOption)}
-            freeOnly={filters.freeOnly}
-            onFreeOnlyChange={(value) => setFilters(prev => ({ ...prev, freeOnly: value }))}
-            bookmarkedOnly={filters.bookmarkedOnly}
-            onBookmarkedOnlyChange={handleBookmarkedOnlyChange}
-            isAuthenticated={isAuthenticated}
-            onAddTool={() => setIsAddToolModalOpen(true)}
-          />
+          {/* 필터 컨트롤 */}
+          <div className="mb-6">
+            {isLoading ? (
+              <FilterSkeleton />
+            ) : (
+              <div className="bg-white rounded-xl shadow-md p-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex-grow">
+                    <FilterControls 
+                      categories={categories}
+                      selectedCategory={filters.selectedCategory}
+                      onCategoryChange={handleCategoryChange}
+                      searchTerm={filters.searchTerm}
+                      onSearchChange={(term) => setFilters(prev => ({ ...prev, searchTerm: term }))}
+                      sortOrder={sortOrder}
+                      onSortChange={(value: string) => setSortOrder(value as SortOption)}
+                      freeOnly={filters.freeOnly}
+                      onFreeOnlyChange={(value) => setFilters(prev => ({ ...prev, freeOnly: value }))}
+                      bookmarkedOnly={filters.bookmarkedOnly}
+                      onBookmarkedOnlyChange={handleBookmarkedOnlyChange}
+                      isAuthenticated={isAuthenticated}
+                      onAddTool={() => setIsAddToolModalOpen(true)}
+                    >
+                      <div className="flex gap-3">
+                        <button
+                          onClick={handleExportTools}
+                          disabled={isExporting}
+                          className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center gap-1 text-sm"
+                        >
+                          {isExporting ? (
+                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                            </svg>
+                          )}
+                          내보내기
+                        </button>
+                        <button
+                          onClick={() => setIsAddToolModalOpen(true)}
+                          className="px-3 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-md hover:from-indigo-700 hover:to-purple-700 transition-colors duration-200 flex items-center gap-1 text-sm"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                          도구 추가
+                        </button>
+                      </div>
+                    </FilterControls>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* 사이트 주요 통계 정보 */}
           {(!firebaseConfigured || (!isLoading && aiToolsData.length > 0)) && (
@@ -605,6 +668,7 @@ const AppContent: React.FC = () => {
         categories={categories}
         onSuccess={showSuccess}
         onError={showError}
+        isAdmin={false} // 메인 페이지에서는 어드민이 아님
       />
 
       {/* 리뷰 모달 */}

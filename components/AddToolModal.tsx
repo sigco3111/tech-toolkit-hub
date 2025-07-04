@@ -10,6 +10,7 @@ interface AddToolModalProps {
   categories: string[];
   onSuccess?: (message: string) => void;
   onError?: (message: string) => void;
+  isAdmin?: boolean; // 어드민 상태를 prop으로 받음
 }
 
 
@@ -24,7 +25,8 @@ const AddToolModal: React.FC<AddToolModalProps> = ({
   onAddTool, 
   categories,
   onSuccess,
-  onError
+  onError,
+  isAdmin = false // 기본값은 false로 설정
 }) => {
   const { user } = useAuth();
   
@@ -268,7 +270,8 @@ const AddToolModal: React.FC<AddToolModalProps> = ({
                             <option key={category} value={category}>{category}</option>
                           ));
                       })()}
-                      <option value="custom">+ 새 카테고리 입력</option>
+                      {/* 어드민에게만 새 카테고리 입력 옵션 표시 */}
+                      {isAdmin && <option value="custom">+ 새 카테고리 입력</option>}
                     </select>
                     {/* 디버깅 정보 */}
                     {process.env.NODE_ENV === 'development' && (

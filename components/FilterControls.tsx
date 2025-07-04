@@ -15,6 +15,7 @@ interface FilterControlsProps {
   onBookmarkedOnlyChange?: (bookmarked: boolean) => void;
   isAuthenticated?: boolean;
   onAddTool?: () => void;
+  children?: React.ReactNode;
 }
 
 const FilterControls: React.FC<FilterControlsProps> = ({
@@ -31,6 +32,7 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   onBookmarkedOnlyChange,
   isAuthenticated = false,
   onAddTool,
+  children,
 }) => {
   // 로컬 검색어 상태 (즉시 UI 업데이트용)
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
@@ -101,9 +103,9 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   
   return (
     <div className="bg-white p-3 md:p-4 rounded-xl shadow-md mb-6 md:mb-8 sticky top-2 md:top-4 z-10">
-      {/* 도구 추가 버튼 - 이름으로 검색 위에 배치 */}
-      {isAuthenticated && onAddTool && (
-        <div className="mb-4 flex justify-end">
+      {/* 상단 영역: 도구 추가 버튼 또는 자식 컴포넌트 */}
+      <div className="mb-4 flex justify-end">
+        {children || (isAuthenticated && onAddTool && (
           <button
             onClick={onAddTool}
             className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200"
@@ -113,8 +115,8 @@ const FilterControls: React.FC<FilterControlsProps> = ({
             </svg>
             <span>도구 추가</span>
           </button>
-        </div>
-      )}
+        ))}
+      </div>
       
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="md:col-span-2">
@@ -249,6 +251,6 @@ const FilterControls: React.FC<FilterControlsProps> = ({
       )}
     </div>
   );
-};
+}
 
 export default FilterControls;
