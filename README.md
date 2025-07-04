@@ -4,7 +4,7 @@
 
 **AI 테크 허브**는 개발자와 AI 사용자를 위한 필수 도구 모음 사이트입니다. AI 챗봇, 개발 도구, 클라우드 플랫폼 등 다양한 기술 스택의 도구들을 한곳에서 탐색, 필터링, 검색하고 AI 추천까지 받을 수 있는 모던 웹 애플리케이션입니다.
 
-![AI 테크 허브 Screenshot](https://storage.googleapis.com/static.protopie.io/challenges/resources/D1/challenge_1.gif)
+실행 주소 : https://dev-canvas-pi.vercel.app/
 
 ## ✨ 주요 기능
 

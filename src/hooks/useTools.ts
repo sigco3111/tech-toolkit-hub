@@ -18,7 +18,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { FirebaseTool, ToolInput, FirestoreQueryResult, SortOption } from '../../types';
-import { CATEGORIES } from '../../constants'; // CATEGORIES 상수 가져오기
+// CATEGORIES 상수 가져오기 제거
 
 /**
  * Firebase에서 도구 목록을 실시간으로 가져오고 관리하는 훅
@@ -35,6 +35,35 @@ export function useTools(category?: string, sortOrder: SortOption = 'updated_des
   const [data, setData] = useState<FirebaseTool[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [categoryList, setCategoryList] = useState<string[]>(['전체']);
+
+  // 카테고리 목록 로드
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const categoriesCollection = collection(db, 'categories');
+        const categoriesSnapshot = await getDocs(categoriesCollection);
+        
+        const categoryNames: string[] = [];
+        categoriesSnapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.name) {
+            categoryNames.push(data.name);
+          }
+        });
+        
+        // 카테고리 이름 오름차순으로 정렬
+        categoryNames.sort((a, b) => a.localeCompare(b));
+        
+        // '전체' 카테고리를 맨 앞에 추가
+        setCategoryList(['전체', ...categoryNames]);
+      } catch (error) {
+        console.error('카테고리 목록 로드 오류:', error);
+      }
+    };
+    
+    loadCategories();
+  }, []);
 
   // 카테고리 및 정렬 옵션 변경 시 데이터 로드
   useEffect(() => {
@@ -274,10 +303,10 @@ export function useTools(category?: string, sortOrder: SortOption = 'updated_des
     // 데이터 로드 시작
     loadData();
     
-    // 클린업 함수
+    // 컴포넌트 언마운트 시 구독 해제
     return () => {
       if (unsubscribe) {
-        console.log('🧹 실시간 구독 해제');
+        console.log('🔄 Firebase 구독 해제');
         unsubscribe();
       }
     };
@@ -353,19 +382,7 @@ export function useTools(category?: string, sortOrder: SortOption = 'updated_des
     }
   };
 
-  // 사용 가능한 카테고리 목록 추출
-  const categories = useMemo(() => {
-    // 데이터가 로드되지 않았거나 빈 경우 CATEGORIES 상수 사용
-    if (data.length === 0) {
-      console.log('📂 카테고리 목록: 기본 CATEGORIES 상수 사용');
-      return CATEGORIES;
-    }
-    
-    // 데이터가 있는 경우 동적으로 카테고리 추출 (기존 방식)
-    console.log('📂 카테고리 목록: 데이터에서 동적 추출');
-    const uniqueCategories = [...new Set(data.map(tool => tool.category))];
-    return ['전체', ...uniqueCategories.sort()];
-  }, [data]);
+  // 사용 가능한 카테고리 목록 추출 부분 제거
 
   return {
     data,
@@ -374,7 +391,7 @@ export function useTools(category?: string, sortOrder: SortOption = 'updated_des
     addTool,
     updateTool,
     deleteTool,
-    categories
+    categories: categoryList
   };
 }
 

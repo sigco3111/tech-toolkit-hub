@@ -38,6 +38,9 @@ const EditToolModal: React.FC<EditToolModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Partial<ToolInput>>({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  // 카테고리 목록 필터링 - '전체' 카테고리 제외
+  const filteredCategories = categories.filter(cat => cat !== '전체');
 
   // Firebase 도구인지 확인하는 타입 가드
   const isFirebaseTool = (tool: AiTool | FirebaseTool): tool is FirebaseTool => {
@@ -255,9 +258,11 @@ const EditToolModal: React.FC<EditToolModalProps> = ({
                 }`}
                 disabled={isSubmitting}
               >
-                <option value="">카테고리를 선택하세요</option>
-                {categories.filter(cat => cat !== '전체').map(category => (
-                  <option key={category} value={category}>{category}</option>
+                <option value="">카테고리 선택</option>
+                {filteredCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
                 ))}
               </select>
               {errors.category && (
