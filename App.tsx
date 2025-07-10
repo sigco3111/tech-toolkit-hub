@@ -15,6 +15,7 @@ import { useToast } from './src/hooks/useToast';
 import { useBookmarks } from './src/hooks/useBookmarks';
 import { isFirebaseConfigured } from './src/lib/firebase';
 import { Analytics } from "@vercel/analytics/react"
+import StatisticsModal from './components/StatisticsModal';
 // 내보내기 관련 import 제거
 // import { exportToolsToJson, downloadJsonFile } from './src/utils/exportImport';
  
@@ -119,6 +120,9 @@ const AppContent: React.FC = () => {
   // 리뷰 모달 상태 관리
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedTool, setSelectedTool] = useState<AiTool | FirebaseTool | null>(null);
+  
+  // 통계 모달 상태 관리
+  const [isStatisticsModalOpen, setIsStatisticsModalOpen] = useState(false);
   
   // 내보내기 상태 관리 제거
   // const [isExporting, setIsExporting] = useState(false);
@@ -390,30 +394,15 @@ const AppContent: React.FC = () => {
     }
   };
 
+  /**
+   * 사이트 통계 모달 열기 함수
+   */
+  const handleOpenStatisticsModal = () => {
+    setIsStatisticsModalOpen(true);
+  };
+
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8">
-      {/* Dev Canvas 카드 - 좌측 상단 고정 */}
-      <div className="fixed top-4 left-4 z-50">
-        <a
-          href="https://dev-canvas-pi.vercel.app/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1"
-        >
-          <div className="px-3 py-2 flex items-center gap-2">
-            <div className="w-6 h-6 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-              </svg>
-            </div>
-            <div className="text-sm">
-              <div className="font-semibold leading-tight">Dev Canvas</div>
-              <div className="text-xs opacity-90">오픈소스 허브</div>
-            </div>
-          </div>
-        </a>
-      </div>
-
       <header className="text-center mb-12">
         <div className="flex justify-between items-start mb-6">
           <div className="flex-1">
@@ -486,9 +475,30 @@ const AppContent: React.FC = () => {
                       bookmarkedOnly={filters.bookmarkedOnly}
                       onBookmarkedOnlyChange={handleBookmarkedOnlyChange}
                       isAuthenticated={isAuthenticated}
-                      onAddTool={() => setIsAddToolModalOpen(true)}
                     >
-                      {/* 내보내기 버튼 제거 - 어드민 페이지에서만 사용 가능하도록 수정 */}
+                      {/* 버튼 영역 */}
+                      <div className="flex items-center gap-2">
+                        {isAuthenticated && (
+                          <button
+                            onClick={() => setIsAddToolModalOpen(true)}
+                            className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            <span>도구 추가</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={handleOpenStatisticsModal}
+                          className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors duration-200"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
+                          <span>사이트 현황</span>
+                        </button>
+                      </div>
                     </FilterControls>
                   </div>
                   <div className="text-sm text-gray-600">
@@ -499,12 +509,12 @@ const AppContent: React.FC = () => {
             )}
           </div>
 
-          {/* 사이트 주요 통계 정보 */}
-          {(!firebaseConfigured || (!isLoading && aiToolsData.length > 0)) && (
+          {/* 사이트 주요 통계 정보 - 모달로 대체되어 제거 */}
+          {/* {(!firebaseConfigured || (!isLoading && aiToolsData.length > 0)) && (
             <section className="my-8">
               <SiteStatistics data={aiToolsData} />
             </section>
-          )}
+          )} */}
 
           <main>
             <div className="flex justify-between items-center mb-4">
@@ -596,6 +606,13 @@ const AppContent: React.FC = () => {
           onError={(message) => showError(message)}
         />
       )}
+
+      {/* 통계 모달 */}
+      <StatisticsModal
+        isOpen={isStatisticsModalOpen}
+        onClose={() => setIsStatisticsModalOpen(false)}
+        data={aiToolsData}
+      />
 
       {/* 토스트 메시지 컨테이너 */}
       <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
