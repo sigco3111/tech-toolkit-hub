@@ -2,7 +2,7 @@
 
 [![React](https://img.shields.io/badge/React-19-blue?logo=react)](https://react.dev/) [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)](https://www.typescriptlang.org/) [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-blue?logo=tailwindcss)](https://tailwindcss.com/) [![Firebase](https://img.shields.io/badge/Firebase-11.x-orange?logo=firebase)](https://firebase.google.com/)
 
-**AI 테크 허브**는 개발자와 AI 사용자를 위한 도구 모음 사이트입니다. AI 챗봇, 개발 도구, 클라우드 플랫폼 등 다양한 기술 스택의 도구들을 한곳에서 탐색, 필터링, 검색하고 AI 추천까지 받을 수 있는 모던 웹 애플리케이션입니다.
+**AI 테크 허브**는 개발자와 AI 사용자를 위한 도구들을 등록하고 평가하는 커뮤니티 사이트입니다. AI 챗봇, 개발 도구, 클라우드 플랫폼 등 다양한 기술 스택의 도구들을 한곳에서 탐색, 필터링, 검색하는 웹 애플리케이션입니다.
 
 실행 주소 : https://tech-toolkit-hub.vercel.app/
 
