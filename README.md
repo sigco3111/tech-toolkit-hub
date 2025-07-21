@@ -28,7 +28,6 @@
 - **Charts**: [Recharts](https://recharts.org/)
 - **Database**: [Firebase Firestore](https://firebase.google.com/docs/firestore)
 - **Authentication**: [Firebase Authentication](https://firebase.google.com/docs/auth)
-- **AI**: [Google Gemini API (@google/genai)](https://ai.google.dev/sdks)
 - **Module System**: [ES Modules with importmap](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/script/type/importmap) (No bundler required)
 
 ## 🚀 시작하기
