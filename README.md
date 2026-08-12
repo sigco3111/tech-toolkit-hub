@@ -4,7 +4,7 @@
 
 **AI 테크 허브**는 개발자와 AI 사용자를 위한 도구들을 등록하고 평가하는 커뮤니티 사이트입니다. AI 챗봇, 개발 도구, 클라우드 플랫폼 등 다양한 기술 스택의 도구들을 한곳에서 탐색, 필터링, 검색하는 웹 애플리케이션입니다.
 
-실행 주소 : https://tech-toolkit-hub.vercel.app/
+실행 주소 : https://sigco3111.github.io/tech-toolkit-hub/
 
 ## ✨ 주요 기능
 
