@@ -56,6 +56,16 @@
    - Firebase Console → "Firestore Database" → "데이터베이스 만들기"
    - 테스트 모드로 시작 (나중에 보안 규칙 적용)
    - 위치 선택 (asia-northeast3 - 서울 권장)
+   - **Rules 탭에서 보안 규칙 적용 (★ 필수)**: 이 저장소의 `firestore.rules` 파일 내용을 그대로 붙여넣기. 임시로 모든 접근 허용하려면:
+     ```javascript
+     rules_version = '2';
+     service cloud.firestore {
+       match /databases/{database}/documents {
+         match /{document=**} { allow read, write: if true; }
+       }
+     }
+     ```
+   - ⚠️ **비로그인 상태에서 데이터 로딩 오류 표시** = Rules 미적용 또는 너무 엄격. 위 임시 규칙으로 해결.
 
 3. **Authentication 설정**:
    - Firebase Console → "Authentication" → "시작하기"
