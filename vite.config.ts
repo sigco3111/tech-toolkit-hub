@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), ['VITE_', '']);
     
     return {
+      base: '/tech-toolkit-hub/',
       // 환경 변수를 클라이언트 코드에서 사용할 수 있도록 정의
       define: {
         // Gemini API 키
