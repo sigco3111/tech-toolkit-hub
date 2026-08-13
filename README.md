@@ -4,11 +4,11 @@
 
 **AI 테크 허브**는 개발자와 AI 사용자를 위한 도구들을 등록하고 평가하는 커뮤니티 사이트입니다. AI 챗봇, 개발 도구, 클라우드 플랫폼 등 다양한 기술 스택의 도구들을 한곳에서 탐색, 필터링, 검색하는 웹 애플리케이션입니다.
 
-라이브 데모 : https://sigco3111.github.io/tech-toolkit-hub/
+라이브 데모 : https://tech-toolkit-hub.vercel.app/
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-GitHub%20Pages-222222?style=for-the-badge&logo=githubpages&logoColor=white)](https://sigco3111.github.io/tech-toolkit-hub/)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://tech-toolkit-hub.vercel.app/)
 
-> 📦 **호스팅 메모**: 과거에는 Vercel에 배포되었으며, 2026-08에 GitHub Pages로 전환되었습니다. `vercel.json`은 Vercel 배포 이력 보존(SPA rewrites) 차원에서 그대로 유지합니다.
+> 📦 **호스팅 메모**: GitHub Pages에서 CDN 캐시 문제로 배포가 깨져서 (2026-08-13), Vercel로 이전했습니다. Firebase 6개 환경변수는 `.env`에서 자동으로 주입됩니다. `vercel.json`은 Vercel 배포 이력 보존(SPA rewrites) 차원에서 그대로 유지합니다.
 
 ## ✨ 주요 기능
 
@@ -126,11 +126,11 @@ AI 테크 허브는 관리자를 위한 별도의 어드민 페이지를 제공�
    - 카테고리 추가/수정/삭제
    - 카테고리별 도구 수 확인
 
-### Vercel 배포 시 주의사항 (정직함 보존 차원)
+### 배포
 
-> ⚠️ 현재는 GitHub Pages를 사용 중입니다. Vercel에서 마이그레이션할 때 참고할 SPA 라우팅 정보는 보존 차원에서 유지합니다.
+`vercel deploy --prod --yes` 명령으로 Vercel에 자동 배포됩니다. Firebase 6개 환경변수는 `.env` 파일에서 자동 주입됩니다. SPA 라우팅을 위한 `vercel.json` rewrites 설정은 그대로 유지됩니다.
 
-Vercel에 배포할 경우 SPA(Single Page Application) 라우팅 문제로 어드민 페이지에 직접 접근 시 404 에러가 발생할 수 있습니다. 이를 해결하기 위해 프로젝트 루트에 `vercel.json` 파일을 추가하여 모든 경로를 `index.html`로 리다이렉트하는 설정이 필요합니다:
+> 💡 GitHub Pages는 Firebase 환경변수 + CDN 캐시 문제로 비추천. Vercel 사용 권장.
 
 ```json
 {
